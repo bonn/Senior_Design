@@ -1,0 +1,110 @@
+// Jordan Bonn
+// This file is used to check the basic functionality of the sensors and the uC
+
+
+#include <Adafruit_LPS35HW.h>
+
+#include "DHTesp.h"
+
+#ifdef ESP32
+#pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
+#error Select ESP8266 board.
+#endif
+
+DHTesp dht;
+
+Adafruit_LPS35HW lps33hw = Adafruit_LPS35HW();
+
+int count = 0;
+float pH_Sensor_Value;
+float pH_Sensor_Voltage;
+float pH_Sensor_Reading ;
+
+void setup() {
+  tft.begin(115200);
+  tft.println();
+  tft.println("Status\tHumidity (%)\tTemperature (C)\t(F)\tHeatIndex (C)\t(F)");
+  String thisBoard = ARDUINO_BOARD;
+  tft.println(thisBoard);
+
+  // Autodetect is not working reliable, don't use the following line
+  // dht.setup(17);
+  // use this instead: 
+  dht.setup(16, DHTesp::DHT22); // Connect DHT sensor to GPIO 12
+
+
+  // Wait until tft port is opened
+  while (!tft) { delay(1); }
+
+  tft.println("Adafruit LPS33HW Test");
+
+  if (!lps33hw.begin_I2C()) {
+  //if (!lps33hw.begin_SPI(LPS_CS)) {
+  //if (!lps33hw.begin_SPI(LPS_CS, LPS_SCK, LPS_MISO, LPS_MOSI)) {
+    tft.println("Couldn't find LPS33HW chip");
+    while (1);
+  }
+  tft.println("Found LPS33HW chip");
+}
+
+
+void loop() {
+
+  tft.print("This is reading number ");
+  tft.println(count+1);
+  count++;
+ 
+   
+  delay(dht.getMinimumSamplingPeriod());
+  
+  
+  
+  float humidity = dht.getHumidity();
+  float temperature = dht.getTemperature();
+  pH_Sensor_Value = analogRead(A0);
+  pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
+  pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
+
+  tft.println(pH_Sensor_Value);
+  tft.println(pH_Sensor_Voltage);
+  tft.print("The pH sensor is reading a pH of: ");
+  tft.println(pH_Sensor_Reading);
+  tft.print("\n");
+  
+
+
+  tft.print("The DHT system status is: ");
+  tft.println(dht.getStatusString());
+  
+  tft.print("The DHT reports humidity is at: ");
+  tft.print(humidity, 1);
+  tft.println(" percent \t");
+  
+  tft.print("The DHT reports temperature is at: ");
+  tft.print(temperature, 1);
+  tft.print("C \t");
+  tft.print(dht.toFahrenheit(temperature), 1);
+  tft.println("F ");
+  
+  tft.print("The DHT reports Heat Index is at: ");
+  tft.print(dht.computeHeatIndex(temperature, humidity, false), 1);
+  tft.print("C \t");
+  tft.print(dht.computeHeatIndex(dht.toFahrenheit(temperature), humidity, true), 1);
+  tft.println("F ");
+  tft.print("\n\n");
+  
+  
+  
+  
+  
+  tft.print("The LPS reports temperature is at: ");
+  tft.print(lps33hw.readTemperature());
+  tft.println(" C");
+  
+  tft.print("The LPS Reports the Pressure is at: ");
+  tft.print(lps33hw.readPressure());
+  tft.println(" hPa");
+  tft.println("\n\n\n------------------------------------------------------------------------------ \n\n\n");
+  tft.println();
+
+}
