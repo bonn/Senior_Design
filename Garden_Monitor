@@ -1,0 +1,273 @@
+
+
+//Written by Jordan Bonn taken from various examples and modified
+
+//State Machine Video
+// https://www.youtube.com/watch?v=pxaIyNbcPrA&ab_channel=JoonyeeChuah
+
+
+
+
+#include <ESP8266WiFi.h>                //ESP8266 Library
+#include <WiFiClientSecure.h>           //ESP8266 Library for secure Wifi connections
+#include <HTTPSRedirect.h>              //ESP8266 Library for accessing webpages that require the address to be redirected
+
+#include <Adafruit_LPS35HW.h>
+
+#include "DHTesp.h"
+
+#include <TFT_eSPI.h> // Graphics and font library for ILI9341 driver chip
+
+#include <SPI.h>
+
+
+
+
+
+TFT_eSPI tft = TFT_eSPI();  // Invoke library
+
+// enabling DHT_esp device ( used for monioring the temperature and humidity )
+DHTesp dht;
+
+// enabling LPS device ( used for measuring the water temp and the pressure which will be used for the tank capacity )
+Adafruit_LPS35HW lps33hw = Adafruit_LPS35HW();
+
+// some variables used for displaying the sample cycle and pH values
+int count = 0;
+float pH_Sensor_Value;
+float pH_Sensor_Voltage;
+float pH_Sensor_Reading ;
+int i = 0;
+
+//**********************************************************************
+//*********************************************************************
+//*****************__      __ _  ___  _ ******************************
+//*****************\ \    / /(_)| __|(_)*****************************
+//***************** \ \/\/ / | || _| | |****************************
+//*****************  \_/\_/  |_||_|  |_|*****************************
+//********************************************************************
+//*********************************************************************
+//**********************************************************************
+//------------------------------------------------------------------------------
+const char* ssid = "The Promised LAN";
+const char* password = "einstein418";
+
+//------------------------------------------------------------------------------
+//**********************************************************************
+
+
+
+
+
+
+
+//_______________________________Google Sheets______________________________________
+//Need to make a google script for each device  i.e. one for DHT, one for LPS, one for pH
+// Each script will need its own unique URL to with its respective GscriptID so that the data can go to different sheets
+//ignore the above
+// instead a single script will be used with a single function called to post all data to the various spreadsheets.
+//The order that the data is entered will determine what spreadsheet it goes to.
+// This is the order "save_data(ph_tag, ph_value, dht_TEMP_tag, dht_TEMP_value,
+//                              dht_HUM_tag, dht_HUM_value, lps_TEMP_tag, lps_TEMP_value,
+//                               lps_PRES_tag, lps_PRES_value)
+
+
+// The ID below comes from Google Sheets.
+// Towards the bottom of this page, it will explain how this can be obtained
+const char *GScriptId = "AKfycbwugqL162Rrf3bZNuqIn8qb6T8LdePri9ou5__y_9Quo5TaRr8";
+
+// Push data on this interval
+const int dataPostDelay = 30000;     // 0.5 minutes = 1 * 30 * 1000
+
+const char* host = "script.google.com";
+const char* googleRedirHost = "script.googleusercontent.com";
+
+const int httpsPort =     443;
+HTTPSRedirect client(httpsPort);
+
+// Prepare the url (without the varying data)
+String url = String("/macros/s/") + GScriptId + "/exec?";
+
+const char* fingerprint = "F0 5C 74 77 3F 6B 25 D7 3B 66 4D 43 2F 7E BC 5B E9 28 86 AD";
+
+
+
+
+
+
+//**********************************************************************
+//_______________________________Google Sheets Post Function______________________________________
+
+//Need to make a function for each device so that the correct GscriptID is used for that devices google sheet tab
+
+//**********************************************************************
+
+// This is the main method where data gets pushed to the Google sheet* **********************
+
+void postData(String ph_tag, float ph_value, String dht_TEMP_tag, float dht_TEMP_value,  String dht_HUM_tag, float dht_HUM_value, String lps_TEMP_tag, float lps_TEMP_value, String lps_PRES_tag, float lps_PRES_value){    
+    
+    
+    if (!client.connected()){
+            tft.println("Connecting to client again…");
+
+            client.connect(host, httpsPort);
+    }
+
+    
+    String urlFinal = url + "ph_tag=" + ph_tag + "&ph_value=" + String(ph_value)+"dht_TEMP_tag=" + dht_TEMP_tag + "&dht_TEMP_value=" + String(dht_TEMP_value)+"dht_HUM_tag=" + dht_HUM_tag + "&dht_HUM_value=" + String(dht_HUM_value)+"lps_TEMP_tag=" + lps_TEMP_tag + "&lps_TEMP_value=" + String(lps_TEMP_value)+"lps_PRES_tag=" + lps_PRES_tag + "&lps_PRES_value=" + String(lps_PRES_value);
+    client.printRedir(urlFinal, host, googleRedirHost);
+}
+//**********************************************************************
+
+
+
+
+void setup() {
+
+    tft.init();
+    tft.setRotation(0);
+
+    tft.println("Connecting to wifi: ");
+    tft.println(ssid);
+    tft.flush();
+
+    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
+
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+            delay(500);
+            tft.print(".");
+    }
+    tft.println(" IP address: ");
+    tft.println(WiFi.localIP());
+
+    tft.print(String("Connecting to "));
+    tft.println(host);
+
+
+    // This variable is a flag for the connection timing out
+    bool flag = false;
+
+    //This loop tries to connect 5 times before timing out
+    for (int i=0; i<5; i++){
+
+            client.setInsecure();
+            int retval = client.connect(host, httpsPort);
+            if (retval == 1) {
+                        flag = true;
+                        break;
+            }
+            else
+                    tft.println("Connection failed. Retrying…");
+    }
+
+    // Connection Status, 1 = Connected, 0 is not.
+    tft.println("Connection Status: " + String(client.connected()));
+    tft.flush();
+
+    if (!flag){
+            tft.print("Could not connect to server, the connection timed out: ");
+            tft.println(host);
+            tft.println("Exiting…");
+            tft.flush();
+            return;
+    }
+
+    // Data will still be pushed even certification don’t match.
+    if (client.verify(fingerprint, host)) {
+            tft.println("Certificate match.");
+    } else {
+            tft.println("Certificate mis-match");
+    }
+}
+
+
+
+
+
+
+
+
+// Continue pushing data at a given interval
+void loop() {
+
+    // Set "cursor" at top left corner of display (0,0) and select font 2
+    // (cursor will move to next line automatically during printing with 'tft.println'
+    //  or stay on the line is there is room for the text with tft.print)
+
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0, 2);
+    // Set the font colour to be green with black background, set to font 4
+    tft.setTextColor(TFT_GREEN,TFT_BLACK);
+
+    tft.print("This is reading number ");
+    tft.println(count+1);
+    count++;
+
+    tft.setCursor(0, 0, 2);
+    delay(dht.getMinimumSamplingPeriod());
+    tft.fillScreen(TFT_BLACK);
+
+    float humidity = dht.getHumidity();
+    float temperature = dht.getTemperature();
+   
+    pH_Sensor_Value = analogRead(A0);
+    pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
+    pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
+
+    
+    
+    tft.println("The pH sensor is reading a value of: ");
+    tft.println(pH_Sensor_Value);
+    tft.println("The pH sensor is reading a voltage of: ");
+    tft.println(pH_Sensor_Voltage);
+    tft.println("The pH sensor is reading a pH of: ");
+    tft.println(pH_Sensor_Reading);
+    tft.print("\n");
+
+    delay (dataPostDelay*0.15);
+    tft.setCursor(0, 0, 2);
+    tft.fillScreen(TFT_BLACK);
+
+    tft.println("The DHT system status is: ");
+    tft.println(dht.getStatusString());
+
+    tft.println("The DHT reports humidity is at: ");
+    tft.print(humidity, 1);
+    tft.println(" percent \t");
+
+    tft.println("The DHT reports temperature is at: ");
+    tft.print(temperature, 1);
+    tft.println("C \t");
+    tft.print(dht.toFahrenheit(temperature), 1);
+    tft.println("F ");
+
+
+    
+    delay (dataPostDelay*0.15);
+    
+    tft.setCursor(0, 0, 2);
+    tft.fillScreen(TFT_BLACK);
+
+    tft.println("The LPS reports temperature is at: ");
+    tft.print(lps33hw.readTemperature());
+    tft.println(" C");
+
+    tft.println("The LPS Reports the Pressure is at: ");
+    tft.print(lps33hw.readPressure());
+    tft.println(" hPa");
+    tft.println("\n\n\n------------------------------------------------------------------------------ \n\n\n");
+    tft.println();
+
+    
+    // This function is posting the data to the google sheet document
+ //   postData("GRV_PH","test","DHT_TEMP", temperature,"DHT_HUM", humidity,"LPS_TEMP", lps33hw.readTemperature(),"LPS_PRES", lps33hw.readPressure());
+
+
+    // This variable is just a simple counter to keep track of how many readings have been done
+    i++;
+
+    
+    delay (dataPostDelay);
+    
+}
