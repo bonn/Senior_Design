@@ -1,5 +1,4 @@
 #include <Adafruit_LPS35HW.h>
-#include <ESP8266WiFi.h>
 
 Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
