@@ -22,6 +22,7 @@ float pH_Sensor_Reading ;
 
 void setup() {
   tft.begin(115200);
+  while (!Serial) { delay(1); } // Wait until serial port is opened
   tft.println();
   tft.println("Status\tHumidity (%)\tTemperature (C)\t(F)\tHeatIndex (C)\t(F)");
   String thisBoard = ARDUINO_BOARD;
