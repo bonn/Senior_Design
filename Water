@@ -1,0 +1,92 @@
+//Brandon
+
+#include "Arduino.h"
+#include <Adafruit_LPS35HW.h>
+
+
+//This class calls upon the LPS33HW water and temp sensor, flow sensor, and pH sensor's data.
+class Water {
+public:
+
+Water(){
+
+}
+
+float    water_Level;  
+float    water_Temp;   
+uint8_t  water_Flow;  
+float    pH_Level;     
+
+
+
+Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
+
+
+void waterTemperature() {
+
+  if (!lps35hw.begin_I2C()) {
+    Serial.println("Couldn't find LPS35HW chip");
+   while (1);
+  }
+  Serial.println("Found LPS35HW chip");
+}
+
+void loop() {
+  Serial.print("Temperature: ");
+  Serial.print(lps35hw.readTemperature()* 9/5 + 32);
+  water_Temp = (lps35hw.readTemperature()* 9/5 + 32);
+  Serial.println(" F");
+}
+
+
+void waterLevel() {
+
+Serial.print("Pressure: ");
+  Serial.print(lps35hw.readPressure());
+  Serial.println(" hPa");
+
+  Serial.println();
+  delay(1000);
+}
+
+
+void waterFlow() {
+
+
+}
+
+void pHLevel() {
+
+}
+for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
+  { 
+    buf[i]=analogRead(0); 
+    delay(10);
+  }
+  for(int i=0;i<9;i++)        //sort the analog from small to large
+  {
+    for(int j=i+1;j<10;j++)
+    {
+      if(buf[i]>buf[j])
+      {
+        temp=buf[i];
+        buf[i]=buf[j];
+        buf[j]=temp;
+      }
+    }
+  }
+  avgValue=0;
+  for(int i=2;i<8;i++)                      //take the average value of 6 center sample
+    avgValue+=buf[i];
+  float phValue=(float)avgValue*5.0/1024/6; //convert the analog into millivolt
+  phValue=3.5*phValue;                      //convert the millivolt into pH value
+  Serial.print("    pH:");  
+  Serial.print(phValue,2);
+  Serial.println(" ");
+  digitalWrite(13, HIGH);       
+  delay(800);
+  digitalWrite(13, LOW); 
+
+}
+
+#endif
