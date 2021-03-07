@@ -1,7 +1,7 @@
 //Brandon
 
 #include <ESP8266WiFi.h>
-#include "Arduino.h"
+#include <Arduino.h>
 #include <Adafruit_LPS35HW.h>
 
 #define SensorPin A0          // the pH meter Analog output is connected with the Analog pin
