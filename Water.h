@@ -13,7 +13,8 @@ int buf[10],temp;
 pinMode(13,OUTPUT);  //setting pinMode for the pH sensor
 
 
-double flowRate;    //This is the value we intend to calculate for water flow. 
+int flowPin = 2;    //This is the input pin on the Arduino
+double flowRate;    //This is the value we intend to calculate. 
 volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.  
  
 
@@ -46,27 +47,34 @@ return (lps35hw.readTemperature()* 9/5 + 32); //output is currently Fahrenheit a
 
 }
 
+ 
+ 
 uint8_t get_flow() {
 
-
-pinMode(2, INPUT);           //Sets the pin as an input
-attachInterrupt(2, Flow, RISING);  //Configures interrupt 0 (pin 2) to run the function "Flow"  
-
+  pinMode(flowPin, INPUT);           //Sets the pin as an input
+  attachInterrupt(0, Flow, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"  
 
 
-  count = 1;      // Reset the counter so we start counting from 0 again
+  count = 0;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
   delay (1000);   //Wait 1 second 
   noInterrupts(); //Disable the interrupts on the Arduino
-  
    
- 
+  //Start the math
   flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL 
   flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
   flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
+ 
   return flowRate();
   
 }
+
+ void Flow()
+{
+   count++; //Every time this function is called, increment "count" by 1
+}
+ 
+ 
  
 float get_phlevel() {
 
