@@ -1,7 +1,16 @@
 //Brandon
 
+#include <ESP8266WiFi.h>
 #include "Arduino.h"
 #include <Adafruit_LPS35HW.h>
+
+#define SensorPin A0          // the pH meter Analog output is connected with the Analog pin
+#define Offset 0.00
+
+unsigned long int avgValue;  //Store the average value of the sensor feedback
+float b;
+int buf[10],temp;
+pinMode(13,OUTPUT);  //setting pinMode for the pH sensor
 
 
 //This class calls upon the LPS33HW water pressure and temp sensor, flow sensor, and pH sensor's data.
@@ -12,51 +21,51 @@ Water(){
 
 }
 
-float    water_Level;  
-float    water_Temp;   
-uint8_t  water_Flow;  
-float    pH_Level;     
 
 
 
-void waterLevel() {
+float get_level() {
 Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
-water_level = lps35hw.readPressure(); //output is currently hPa and only called one time
+ return lps35hw.readPressure(); //output is currently hPa and only called one time
 
 }
 
-void waterTemperature() {
+
+
+float get_temp() {
 Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
-
-water_Temp = (lps35hw.readTemperature()* 9/5 + 32); //output is currently Fahrenheit and only called one time
+return (lps35hw.readTemperature()* 9/5 + 32); //output is currently Fahrenheit and only called one time
 
 }
 
 
 
 
-void waterFlow() {
-int flowPin = 2;    //This is the input pin on the Arduino
+uint8_t get_flow() {
+
+
 double flowRate;    //This is the value we intend to calculate. 
 volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.  
  
-pinMode(flowPin, INPUT);           //Sets the pin as an input
-attachInterrupt(0, Flow, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"  
+pinMode(2, INPUT);           //Sets the pin as an input
+attachInterrupt(2, Flow, RISING);  //Configures interrupt 0 (pin 2) to run the function "Flow"  
 
 
 
-  count = 0;      // Reset the counter so we start counting from 0 again
+  count = 1;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
   delay (1000);   //Wait 1 second 
   noInterrupts(); //Disable the interrupts on the Arduino
+  
    
-  //Start the math
+ 
   flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL 
   flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
   flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
-  waterFlow = flowRate;
+  return flowRate();
+  
 }
  
 
@@ -66,15 +75,7 @@ attachInterrupt(0, Flow, RISING);  //Configures interrupt 0 (pin 2 on the Arduin
 
 
 
-void pHLevel() {
-
-#define SensorPin A0          // the pH meter Analog output is connected with the Analog pin
-# define Offset 0.00
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-float b;
-int buf[10],temp;
-pinMode(13,OUTPUT);  
-
+float get_phlevel() {
  for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
   { 
     buf[i]=analogRead(SensorPin);
@@ -100,9 +101,21 @@ pinMode(13,OUTPUT);
   digitalWrite(13, HIGH);       
   delay(800);
   digitalWrite(13, LOW); 
-  pH_Level = phValue;
- 
+  return phValue();
 }
 
 
+}
+
+int main()
+{
+    Water water;
+
+    water.get_level();
+    water.get_temp();
+    water.get_flow();
+    water.get_phlevel();
+
+
+    return 0;
 }
