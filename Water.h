@@ -13,7 +13,7 @@ int buf[10],temp;
 pinMode(13,OUTPUT);  //setting pinMode for the pH sensor
 
 
-double flowRate;    //This is the value we intend to calculate. 
+double flowRate;    //This is the value we intend to calculate for water flow. 
 volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.  
  
 
@@ -104,14 +104,9 @@ float get_phlevel() {
     }
     
 // I think this should be *3.3 since the ESP high is 3.3V; also it should be 1023 not 1024
-  float phValue=(float)avgValue*5.0/1024/6; //convert the analog into millivolt
+  float phValue=(float)avgValue*3.3/1023/6; //convert the analog into millivolt
   phValue=3.5*phValue;                      //convert the millivolt into pH value
   
-//////////////////////   what is this doing?
-  digitalWrite(13, HIGH);       
-  delay(800);
-  digitalWrite(13, LOW); 
-//////////////////////
   return phValue();
 }
 
