@@ -12,6 +12,7 @@ float b;
 int buf[10],temp;
 pinMode(13,OUTPUT);  //setting pinMode for the pH sensor
 
+static float pH_Sensor_Value,pH_Sensor_Voltage,pH_Sensor_Reading;
 
 int flowPin = 2;    //This is the input pin on the Arduino
 double flowRate;    //This is the value we intend to calculate. 
@@ -78,44 +79,15 @@ uint8_t get_flow() {
  
 float get_phlevel() {
 
-    // Sensor reading for Atlas Scientific pH Sensor
-    // pH_Sensor_Value = analogRead(A0);
-    // pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
-    // pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
-
-    // Depending on our memory usage we may have to decrease the sample size
-
-
-    for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
-        { 
-                buf[i]=analogRead(SensorPin);
-                delay(10);
-        }
-    for(int i=0;i<9;i++)        //sort the analog from small to large
-        {
-            for(int j=i+1;j<10;j++)
-                {
-                    if(buf[i]>buf[j])
-                        {
-                            temp=buf[i];
-                            buf[i]=buf[j];
-                            buf[j]=temp;
-                        }
-                    }
-        }
-
-
-    avgValue=0;
-//take the average value of 6 center sample
-  for(int i=2;i<8;i++){
-      avgValue+=buf[i];
-    }
-    
-// I think this should be *3.3 since the ESP high is 3.3V; also it should be 1023 not 1024
-  float phValue=(float)avgValue*3.3/1023/6; //convert the analog into millivolt
-  phValue=3.5*phValue;                      //convert the millivolt into pH value
   
-  return phValue();
+    
+    pH_Sensor_Value = analogRead(A0);
+    pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
+    pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
+              
+  
+  
+  return pH_Sensor_Reading();
 }
 
 
