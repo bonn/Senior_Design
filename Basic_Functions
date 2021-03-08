@@ -20,6 +20,29 @@ float pH_Sensor_Value;
 float pH_Sensor_Voltage;
 float pH_Sensor_Reading ;
 
+
+
+
+   pinMode(2, INPUT);           //Sets the pin as an input
+   attachInterrupt(2, Flow, RISING);  //Configures interrupt 0 (pin 2) to run the function "Flow"  
+
+
+
+  count = 1;      // Reset the counter so we start counting from 0 again
+  interrupts();   //Enables interrupts on the Arduino
+  delay (1000);   //Wait 1 second 
+  noInterrupts(); //Disable the interrupts on the Arduino
+   
+  
+ 
+  flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL 
+  flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
+  flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
+  return flowRate();
+
+
+
+
 void setup() {
   tft.begin(115200);
   while (!Serial) { delay(1); } // Wait until serial port is opened
