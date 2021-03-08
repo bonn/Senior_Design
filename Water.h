@@ -1,29 +1,20 @@
 //Brandon
-
-#include <ESP8266WiFi.h>
 #include <Arduino.h>
 #include <Adafruit_LPS35HW.h>
 
 #define SensorPin A0          // the pH meter Analog output is connected with the Analog pin
-#define Offset 0.00
 
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-float b;
-int buf[10],temp;
-pinMode(13,OUTPUT);  //setting pinMode for the pH sensor
+
 
 static float pH_Sensor_Value,pH_Sensor_Voltage,pH_Sensor_Reading;
 
 int flowPin = 2;    //This is the input pin on the Arduino
 double flowRate;    //This is the value we intend to calculate. 
 volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.  
- 
+
+Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
 
-// Sensor variables for Atlas Scientific pH Sensor
-// float pH_Sensor_Value;
-// float pH_Sensor_Voltage;
-// float pH_Sensor_Reading ;
 
 
 
@@ -34,7 +25,7 @@ public:
 Water(){
 
 }
-Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
+
 
 float get_level() {
 
@@ -53,7 +44,7 @@ return (lps35hw.readTemperature()* 9/5 + 32); //output is currently Fahrenheit a
 uint8_t get_flow() {
 
   pinMode(flowPin, INPUT);           //Sets the pin as an input
-  attachInterrupt(0, Flow, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"  
+  attachInterrupt(0, count++, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"  
 
 
   count = 0;      // Reset the counter so we start counting from 0 again
@@ -66,20 +57,22 @@ uint8_t get_flow() {
   flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
   flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
  
-  return flowRate();
+  return (flowRate);
   
 }
 
- void Flow()
+ 
+ 
+ 
+float get_phlevel() 
 {
-   count++; //Every time this function is called, increment "count" by 1
-}
- 
- 
- 
-float get_phlevel() {
 
   
+
+// Sensor variables for Atlas Scientific pH Sensor
+ //float pH_Sensor_Value;
+ //float pH_Sensor_Voltage;
+ //float pH_Sensor_Reading;
     
     pH_Sensor_Value = analogRead(A0);
     pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
@@ -87,11 +80,11 @@ float get_phlevel() {
               
   
   
-  return pH_Sensor_Reading();
+  return (pH_Sensor_Reading);
 }
 
 
-}
+
 
 int main()
 {
@@ -105,3 +98,4 @@ int main()
 
     return 0;
 }
+};
