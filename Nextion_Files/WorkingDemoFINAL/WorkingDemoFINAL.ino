@@ -3,21 +3,33 @@
  * Complete Project Details http://randomnerdtutorials.com
  */
 
+
+#include <multi_channel_relay.h>
+
 #include <Nextion.h>
 #include "NexText.h"
 #include "NexButton.h"
-//#include "DHT.h"
-#define DHTPIN 4     // what digital pin we're connected to
+
+
+#include "DHTesp.h"
+#include <Adafruit_LPS35HW.h>
+#include <multi_channel_relay.h>
+
+
+
+//#define DHTPIN 4     // what digital pin we're connected to
 
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
 //#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
+
 // Initialize DHT sensor.
 //DHT dht(DHTPIN, DHTTYPE);
 
 int count = 0;
+
 
 
 // LED pins
@@ -26,6 +38,7 @@ const int led2 = 16;
 
 
 
+Multi_Channel_Relay relay;
 
 // Declare your Nextion objects - Example (page id = 0, component id = 1, component name = "b0") 
 /*
@@ -94,7 +107,8 @@ void bDev_OnPopCallback(void *ptr) {
   tState.setText("State: on"); //<-----------make text box with state
 
   Serial.println("I am in  bDev_On PopCallback");
-  digitalWrite(led1, HIGH);
+  //digitalWrite(led1, HIGH);
+    relay.turn_on_channel(1);  
 }
 
 /*
@@ -103,7 +117,8 @@ void bDev_OnPopCallback(void *ptr) {
  */
 void bDev_OffPopCallback(void *ptr) {
   tState.setText("State: off"); //<-------------------same text box updated
-  digitalWrite(led1, LOW);
+  //digitalWrite(led1, LOW);
+   relay.turn_off_channel(1);
 }
 
 /*
@@ -126,6 +141,8 @@ void bDev_OffPopCallback(void *ptr) {
  * When the UPDATE button is released, the temperature and humidity readings are updated. 
  */
 void bUpdatePopCallback(void *ptr) {
+
+  
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = 20.0;
@@ -134,14 +151,17 @@ void bUpdatePopCallback(void *ptr) {
   // Read temperature as Fahrenheit (isFahrenheit = true)
   float f = 76.45;
 
+
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
     return;
   }
-  // Update temperature in Celsius
+  
+//// Update temperature in Celsius
   //static char temperatureCTemp[6];
- // dtostrf(t, 6, 2, temperatureCTemp);
- // tTempC.setText(temperatureCTemp);
+  //dtostrf(t, 6, 2, temperatureCTemp);
+  //tTempC.setText(temperatureCTemp);
+
 
   // Update humidity percentage text and progress bar
   char hTemp[10] = {0}; 
@@ -157,9 +177,11 @@ void bUpdatePopCallback(void *ptr) {
 
 void setup(void) {    
 //  dht.begin();
+
+relay.begin(0x11); 
   Serial.begin(9600);
-  
-    
+       
+
   // You might need to change NexConfig.h file in your ITEADLIB_Arduino_Nextion folder
   // Set the baudrate which is for debug and communicate with Nextion screen
   nexInit();
@@ -174,7 +196,6 @@ void setup(void) {
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
 
-  
 }
 
 void loop(void) {   
@@ -183,8 +204,11 @@ void loop(void) {
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
   count = count+1;
+  
+relay.begin(0x11); 
   nexLoop(nex_listen_list);
-  //Serial.print(" The nexLoop is at ");
+  
+//Serial.print(" The nexLoop is at ");
 
- // Serial.println(count);
+// Serial.println(count);
 }

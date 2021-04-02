@@ -1,8 +1,12 @@
 
+#ifndef Ambient_h
+#define Ambient_h
+
 #include <ESP8266WiFi.h>                //ESP8266 Library
 
 
 //Jordan Bonn - For the Ambient Class
+
 #include <Wire.h>
 #include "SparkFun_VEML6030_Ambient_Light_Sensor.h"
 #include "DHTesp.h"
@@ -17,6 +21,9 @@
 #include <Max517Dac.h>
 
 
+
+
+Multi_Channel_Relay relay;
 
 //Custom Definitions
 
@@ -78,6 +85,7 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
  float pH_Sensor_Voltage;
  float pH_Sensor_Reading ;
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -86,60 +94,60 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 
 
 //This class is used to create the Ambient object that we can get sensor data from
-//class Ambient {
-//public:
-//
-//    Wire.begin();
-//    light_sens_1.begin();
-//    light_sens_1.setGain(gain);
-//    light_sens_1.setIntegTime(time_1);
-//
-//    light_sens_2.begin();
-//    light_sens_2.setGain(gain);
-//    light_sens_2.setIntegTime(time_1);
-//
-//    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
-//
-//    Ambient() {
-//
-//    }
-//
-//// This is used to select sensor 1 or 2
-//// sensor 1 is false (0) and sensor 2 is true (1)
-//    bool light_sensor;
-//
-////This function will return the temp in Farenheit
-//    float get_temp(){
-////        Air_Temp = dht.getTemperature();
-//        return dht.toFahrenheit(dht.getTemperature());
-//    }
-//
-////This function will return the humidity as a percentage
-//    float get_humidity(){
-////        Air_Humidity = dht.getHumidity();
-//        return dht.getHumidity();
-//    }
-//
-////This functin will return the light sensor read
-////It takes a bool arg where false will return sensor 1 data and
-//    uint8_t get_light_reading(light_sensor){
-//
-//      if(!light_sensor){
-//        return light_sens_1.readLight();
-//      }
-//        return light_sens_2.readLight();
-//    }
-//
-//};
+class Ambient {
+public:
+
+    Wire.begin();
+    light_sens_1.begin();
+    light_sens_1.setGain(gain);
+    light_sens_1.setIntegTime(time_1);
+
+    light_sens_2.begin();
+    light_sens_2.setGain(gain);
+    light_sens_2.setIntegTime(time_1);
+
+    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
+
+    Ambient() {
+
+    }
+
+// This is used to select sensor 1 or 2
+// sensor 1 is false (0) and sensor 2 is true (1)
+    bool light_sensor;
+
+//This function will return the temp in Farenheit
+    float get_temp(){
+//        Air_Temp = dht.getTemperature();
+        return dht.toFahrenheit(dht.getTemperature());
+    }
+
+//This function will return the humidity as a percentage
+    float get_humidity(){
+//        Air_Humidity = dht.getHumidity();
+        return dht.getHumidity();
+    }
+
+//This functin will return the light sensor read
+//It takes a bool arg where false will return sensor 1 data and
+    uint8_t get_light_reading(light_sensor){
+
+      if(!light_sensor){
+        return light_sens_1.readLight();
+      }
+        return light_sens_2.readLight();
+    }
+
+};
 
 
 
 //This class is used to create the External Devices object
 class External_Devices {
 public:
-Multi_Channel_Relay relay;
 
-    relay.begin(0x11);
+
+   
 
     External_Devices() {
 
@@ -304,15 +312,4 @@ float get_phlevel() {
 
 }
 
-
-
-
-void setup() {
-  // put your setup code here, to run once:
-
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
-}
+#endif
