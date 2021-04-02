@@ -1,9 +1,9 @@
-// Patrick Schneider 
+// Patrick Schneider
 #include <ESP8266WiFi.h>
 #include <Nextion.h>
 #include "NexText.h"
 #include "NexButton.h"
-#include "NexSlider.h" 
+#include "NexSlider.h"
 
 
 
@@ -29,6 +29,10 @@
 #include <SD.h>
 
 
+
+#include "NTPClient.h"
+#include "ESP8266WiFi.h"
+#include "WiFiUdp.h"
 
 
 
@@ -73,6 +77,21 @@ float lux2;
 String dataString;
 
 
+
+
+
+
+
+const char *ssid = "***********";
+const char *password = "***********";
+
+const long utcOffsetInSeconds = 19800;
+
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+// Define NTP Client to get time
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 
 //***********Setup for Ambient Class**************
@@ -125,9 +144,9 @@ float b;
 int buf[10],temp;
 
 
-double flowRate;    //This is the value we intend to calculate for water flow. 
-volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.  
- 
+double flowRate;    //This is the value we intend to calculate for water flow.
+volatile int count; //This integer needs to be set as volatile to ensure it updates correctly during the interrupt process.
+
 // Sensor variables for Atlas Scientific pH Sensor
  float pH_Sensor_Value;
  float pH_Sensor_Voltage;
@@ -143,34 +162,34 @@ void update_value(){
     Serial.println("I am in the update Value");
     newValue = true;
     Serial.setTimeout(5000);
-    
+
     while(newValue==1){
           Serial.println("New value must be true to be here");
 
           Serial.println("Enter the new desired value: ");
-          
+
           if(Serial.available()){
-              Serial.println("Serial must be available to be here");    
+              Serial.println("Serial must be available to be here");
               int read_data = Serial.parseInt();
               Serial.print("Read Data is: ");
               Serial.println(read_data);
-              
+
               if(read_data==0){
                 Serial.println("read_data is 0, so we will not change the output");
-                
+
               }else if(read_data==1111){
                 Serial.println("resting the DAC ouput to 0");
                 dac.resetOutput();
-                dacOutputValue = 0;  
+                dacOutputValue = 0;
               }else{
                 Serial.println("read_data is NOT 0");
-                dacOutputValue = read_data;    
+                dacOutputValue = read_data;
               }
           }
           newValue = false;
     }
 
- 
+
 }
 
 
@@ -179,21 +198,21 @@ void update_value(){
 uint8_t get_flow() {
 
   pinMode(flowPin, INPUT);           //Sets the pin as an input
-  attachInterrupt(0, count++, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"  
+  attachInterrupt(0, count++, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
 
   count = 0;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
-  delay (1000);   //Wait 1 second 
+  delay (1000);   //Wait 1 second
   noInterrupts(); //Disable the interrupts on the Arduino
-   
+
   //Start the math
-  flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL 
+  flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL
   flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
   flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
- 
+
   return (flowRate);
-  
+
 }
 
 
@@ -211,21 +230,21 @@ uint8_t get_flow() {
 //                                   TOUCH SCREEN OBJECTS                                       //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-//Nextion objects - Example (page id = 0, component id = 1, component name = "b0") 
+//Nextion objects - Example (page id = 0, component id = 1, component name = "b0")
 
-//Water Monitoring values 
+//Water Monitoring values
 NexText tWater_Temp  = NexText (1, 11, "WaterTemp");  //Text with water temperature value.
-NexText tWater_Lvl   = NexText (1, 12, "WaterLvl");   //Text with water level value. 
-NexText tWater_Flow  = NexText (1, 13, "WaterFlow");  //Text with water flow value. 
-NexText tWater_pH    = NexText (1, 14, "pH");         //Text with water pH value. 
+NexText tWater_Lvl   = NexText (1, 12, "WaterLvl");   //Text with water level value.
+NexText tWater_Flow  = NexText (1, 13, "WaterFlow");  //Text with water flow value.
+NexText tWater_pH    = NexText (1, 14, "pH");         //Text with water pH value.
 
-//Ambient Environment values 
+//Ambient Environment values
 NexText tAir_Temp      = NexText (1, 15, "tAir_Temp");       //Text with air temperature value.
 NexText tAir_Humidity  = NexText (1, 16, "tAir_Humidity");   //Text with humidity value.
 NexText tAir_Light_1   = NexText (1, 17, "Light1");          //Text with light level 1 value.
-NexText tAir_Light_2   = NexText (3, 10, "Light2");          //Text with light level 2 value. 
+NexText tAir_Light_2   = NexText (3, 10, "Light2");          //Text with light level 2 value.
 
-//External Devices 
+//External Devices
 NexButton bDev1_On  = NexButton (9, 10, "bDev1_On");   //Button to turn Dev1 ON (LED - EX1)
 NexButton bDev1_Off = NexButton (9, 11, "bDev1_off");  //Button to turn Dev1 OFF (LED - EX1)
 NexText   tState1   = NexText   (9, 9,  "tState1");    //Text to show Dev1 ON/OFF status.
@@ -236,14 +255,14 @@ NexButton bDev3_On  = NexButton (9, 10, "bDev3_On");   //Button to turn Dev3 ON 
 NexButton bDev3_Off = NexButton (9, 11, "bDev3_off");  //Button to turn Dev3 OFF (WATER PUMP - EX3)
 NexText   tState3   = NexText   (9, 9,  "tState3");    //Text to show Dev3 ON/OFF status.
 
-//Dimming Controls 
+//Dimming Controls
 NexSlider sDimmer = NexSlider (9, 3, "sDimmer");      //Slider bar to ontrol EX1 - LED intensity.
-NexText   tDval   = NexText   (9,19, "tDval");        //Text to show value the slider is holding. 
+NexText   tDval   = NexText   (9,19, "tDval");        //Text to show value the slider is holding.
 
 //Upload sensor data sensors
 NexButton bUpload = NexButton(9,18, "bUpload");   //Button to upload data (UD1)
 
-// Register a button object to the touch event list.  
+// Register a button object to the touch event list.
 NexTouch *nex_listen_list[] = {
 
   &bDev1_On,
@@ -252,9 +271,9 @@ NexTouch *nex_listen_list[] = {
   &bDev2_Off,
   &bDev3_On,
   &bDev3_Off,
-  &sDimmer, 
+  &sDimmer,
   &bUpload,
-  
+
   NULL
 };
 
@@ -265,75 +284,75 @@ NexTouch *nex_listen_list[] = {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
- * Button bDev1_On component pop callback function. 
+ * Button bDev1_On component pop callback function.
  * This button turns on channel 1 of the relay
  */
 void bDev1_OnPopCallback(void *ptr) {
-  tState1.setText("State: on"); 
-  relay.turn_on_channel(1);  
+  tState1.setText("State: on");
+  relay.turn_on_channel(1);
 }
 /*
- * Button bDev1_Off component pop callback function. 
+ * Button bDev1_Off component pop callback function.
  * This button turns off channel 1 of the relay
  */
 void bDev1_OffPopCallback(void *ptr) {
-  tState1.setText("State: off"); 
+  tState1.setText("State: off");
   relay.turn_off_channel(1);  ;
 }
 /*
- * Button bDev2_On component pop callback function. 
+ * Button bDev2_On component pop callback function.
   * This button turns on channel 2 of the relay
  */
 void bDev2_OnPopCallback(void *ptr) {
-  tState2.setText("State: on"); 
- relay.turn_on_channel(2);  
+  tState2.setText("State: on");
+ relay.turn_on_channel(2);
 }
 /*
- * Button bDev2_Off component pop callback function. 
+ * Button bDev2_Off component pop callback function.
  * This button turns off channel 2 of the relay
  */
 
 void bDev2_OffPopCallback(void *ptr) {
-  tState1.setText("State: off"); 
-  relay.turn_off_channel(2);  
+  tState1.setText("State: off");
+  relay.turn_off_channel(2);
 }
 /*
- * Button bDev3_On component pop callback function. 
+ * Button bDev3_On component pop callback function.
   * This button turns on channel 3 of the relay
- */ 
+ */
 void bDev3_OnPopCallback(void *ptr) {
-  tState3.setText("State: on"); 
-  relay.turn_on_channel(3);  
+  tState3.setText("State: on");
+  relay.turn_on_channel(3);
 }
 /*
- * Button bDev3_Off component pop callback function. 
+ * Button bDev3_Off component pop callback function.
  * This button turns off channel 3 of the relay
  */
 
 void bDev3_OffPopCallback(void *ptr) {
-  tState3.setText("State: off"); 
-  relay.turn_off_channel(3);  
+  tState3.setText("State: off");
+  relay.turn_off_channel(3);
 }
 
 
 
 
 /*
- * SLider sDimmer component pop call back function 
- * SLider controls a value that is sent to DAC via ESP to update the intensity of the light. 
- * The Slider Text will be updated with the value the slider holds. 
+ * SLider sDimmer component pop call back function
+ * SLider controls a value that is sent to DAC via ESP to update the intensity of the light.
+ * The Slider Text will be updated with the value the slider holds.
  */
 void sDimmerPopCallback(void *ptr){
   uint32_t number = 0;
   char temp[10] = {0};
-  
+
   //Change dimmer value text with the current slider value
   sDimmer.getValue(&number);
-  utoa(number, temp, 10);  
+  utoa(number, temp, 10);
   tDval.setText(temp);
 
   //This function sets the DAC output to the correct level( 8 bit unsinged int; 0-255 levels )
-  dac.setOutput(dacOutputValue) 
+  dac.setOutput(dacOutputValue)
 
 
 }
@@ -349,7 +368,7 @@ void sDimmerPopCallback(void *ptr){
 
 
 void bUploadPopCallback(void *ptr) {
-  
+
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
@@ -370,24 +389,24 @@ void bUploadPopCallback(void *ptr) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //                                  UPDATING SENSOR VARIABLES                                   //
-////////////////////////////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-// CANT WE JUST CALL THE BUPDATESENSOR FUNCTION? AS THAT IS GOING TO GET THE NEW VALUES  
+// CANT WE JUST CALL THE BUPDATESENSOR FUNCTION? AS THAT IS GOING TO GET THE NEW VALUES
 
 
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //                               UPDATING SENSOR DATA ON SCREEN                                 //
-////////////////////////////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 //This is creating the data string of the updated values that will be uploaded to SD
 
 
 
 
-/*   
+/*
 CSV FORMAT
 
 Date/Time, pH Reading, Water Temp, Water Level, Water Flow, Ambient Temp, Ambient Hum, Lux 1, Lux 2
@@ -399,12 +418,12 @@ Date/Time, pH Reading, Water Temp, Water Level, Water Flow, Ambient Temp, Ambien
 
 
   dataString = "";
-  
- 
+
+
     dataString += String(sensor);
     dataString += ",";
-    
-  
+
+
 
 //Water Environment Sensor Update
 
@@ -426,7 +445,7 @@ void bUpdateSensor(){
     dataString += String(sensor);
     dataString += String(sensor);
     dataString += ",";
-    
+
 
 
 
@@ -478,7 +497,7 @@ void bUpdateSensor(){
       static char lux2Temp[6];
       dtostrf(lux2, 6, 2, lux2Temp);
       tAir_Light_2.setText(lux2Temp);
-      
+
 }
 
 
@@ -497,12 +516,27 @@ void bUpdateSensor(){
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //                                        MAIN                                                  //
-////////////////////////////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
-void setup(void) {    
+void setup(void) {
 
   Serial.begin(9600);
-  
+
+
+
+  WiFi.begin(ssid, password);
+
+  while ( WiFi.status() != WL_CONNECTED ) {
+  delay ( 500 );
+  Serial.print ( "." );
+  }
+
+  timeClient.begin();
+  }
+
+
+
+
   Serial.print("Initializing SD card...");
 
   // see if the card is present and can be initialized:
@@ -514,14 +548,14 @@ void setup(void) {
   Serial.println("card initialized.");
 
   //This creates the relay object
-  relay.begin(0x11); 
+  relay.begin(0x11);
 
   // Reset the DAC output
   if(!dac.resetOutput())
    {
       Serial.println("Error talking to DAC. Check wiring.");
    }else{
-      Serial.println("DAC has been reset"); 
+      Serial.println("DAC has been reset");
   }
 
   //Creating Water Objects
@@ -544,47 +578,55 @@ void setup(void) {
 
 
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to
-//set the baudrate 
+//set the baudrate
   nexInit();
 
 //Register the pop event callback function of the components
 //EX1
   bDev1_On.attachPop(bDev1_OnPopCallback, &bDev1_On);
   bDev1_Off.attachPop(bDev1_OffPopCallback, &bDev1_Off);
-  
+
 //EX2
   bDev2_On.attachPop(bDev2_OnPopCallback, &bDev2_On);
   bDev2_Off.attachPop(bDev2_OffPopCallback, &bDev2_Off);
-  
+
 //EX3
   bDev3_On.attachPop(bDev3_OnPopCallback, &bDev3_On);
   bDev3_Off.attachPop(bDev3_OffPopCallback, &bDev3_Off);
-  
+
 //EX1 DIMMER
-  sDimmer.attachPop(sDimmerPopCallback, &sDimmer); 
-  
+  sDimmer.attachPop(sDimmerPopCallback, &sDimmer);
+
 //DATA UPLAOD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
 
-   
+
 //Set EXTERNAL DEVICES as outputs
   pinMode(EX1, OUTPUT);
   pinMode(EX2, OUTPUT);
   pinMode(EX3, OUTPUT);
   pinMode(UD1, OUTPUT);
-  
+
 }
 
-void loop(void) {   
+void loop(void) {
   /*
    * When a pop or push event occured every time,
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
   counter = counter+1;
+  timeClient.update();
+
+
   nexLoop(nex_listen_list);
 
+  if(timeClient.getMinutes() % 5 == 0){
+    bUpdateSensor();
 
-  
+  }
+
+
+
   // Serial.print(" The nexLoop is at ");
   // Serial.println(count);
 }
