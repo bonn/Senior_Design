@@ -457,10 +457,10 @@ void bUpdateSensor(){
       pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
       pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
 
-      pH = pH_Sensor_Reading;
+      pH = 69.420; // pH_Sensor_Reading;
 
       static char pHTemp[6];
-      dtostrf(420, 6,2, pHTemp);
+      dtostrf(pH, 6,2, pHTemp);
       tWater_pH.setText(pHTemp);
     
   // dataString =String(dataString + String(sensor) + ",");
@@ -491,9 +491,9 @@ void bUpdateSensor(){
       //Ambient Environment Sensor Update
 
       //Getting the DHT Temp
-      TempF = dht.toFahrenheit(dht.getTemperature());
+      TempF = 69.69; //dht.toFahrenheit(dht.getTemperature());
       static char temperatureFTemp[6];
-      dtostrf(666, 6, 2, temperatureFTemp);
+      dtostrf(TempF, 6, 2, temperatureFTemp);
       tAir_Temp.setText(temperatureFTemp);
 
 
