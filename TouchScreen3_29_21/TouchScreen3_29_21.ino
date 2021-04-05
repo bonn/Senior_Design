@@ -546,7 +546,7 @@ void setup(void) {
   WiFi.begin(ssid, password);
 
   while ( WiFi.status() != WL_CONNECTED ) {
-  delay ( 500 );
+  delay ( 500 );  // NOT for debugging
   Serial.print ( "." );
   }
 
@@ -559,38 +559,49 @@ void setup(void) {
   // see if the card is present and can be initialized:
   if (!SD.begin(SD_CS)) {
     Serial.println("Card failed, or not present");
+   }else{Serial.println("card initialized.");
    }
   
-  Serial.println("card initialized.");
-
+  delay(500);  // for debugging
+  
   //This creates the relay object
-//  relay.begin(0x11);
+  relay.begin(0x11);
 
-  // Reset the DAC output
-//  if(!dac.resetOutput())
-//   {
-//      Serial.println("Error talking to DAC. Check wiring.");
-//   }else{
-//      Serial.println("DAC has been reset");
-//  }
+  Serial.println("Relay Initialized.");
+  delay(500);  // for debugging
 
+//   Reset the DAC output
+  if(!dac.resetOutput())
+   {
+      Serial.println("Error talking to DAC. Check wiring.");
+   }else{
+      Serial.println("DAC has been reset");
+  }
+//  Serial.println("DAC initialized.");
+  delay(500);  // for debugging
 
-  //creating Ambient objects
-//  Wire.begin();
-//    light_sens_1.begin();
-//    light_sens_1.setGain(gain);
-//    light_sens_1.setIntegTime(time_1);
-//
-//    light_sens_2.begin();
-//    light_sens_2.setGain(gain);
-//    light_sens_2.setIntegTime(time_1);
-//
-//    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
+//  creating Ambient objects
+  Wire.begin();
+    light_sens_1.begin();
+    light_sens_1.setGain(gain);
+    light_sens_1.setIntegTime(time_1);
 
+    light_sens_2.begin();
+    light_sens_2.setGain(gain);
+    light_sens_2.setIntegTime(time_1);
+  Serial.println("Light sensors initialized.");
+  delay(500);  // for debugging
+
+  
+  dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
+
+  Serial.println("DHT initialized.");
+  delay(500);  // for debugging
 
 
   Serial.println("");
   Serial.println("Setting up Nextion Stuff");
+  delay(500);   // for debugging
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to
 //set the baudrate
   nexInit();
