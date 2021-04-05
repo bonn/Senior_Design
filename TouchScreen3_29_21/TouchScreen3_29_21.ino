@@ -51,15 +51,22 @@
 #define AL_ADDR_2 0x10
 
 
-#define DHTPIN 4     // what digital pin we're connected to
 
-int counter = 0;
+#define DHTPIN 4               // what digital pin we're connected to
+
+//int counter = 0;
 
 // Define LED, AIR PUMP, WATER PUMP pins
 
-const int UD1 = 15;
+//const int UD1 = 15;
 
-const int chipSelect = 4;
+const int SD_CS = 4;
+
+const byte water_flow_pin = 10;            // GPIO pin for the water flow sensor
+
+String     dataString = "";
+
+
 
 float temperature;
 float pressure;
@@ -74,16 +81,12 @@ float humidity;
 float lux1;
 float lux2;
 
-String dataString;
+bool trigger;
 
 
 
-
-
-
-
-const char *ssid = "***********";
-const char *password = "***********";
+const char *ssid = "The Promised LAN";
+const char *password = "einstein418";
 
 const long utcOffsetInSeconds = 19800;
 
@@ -115,6 +118,8 @@ long luxVal = 0;
 //Creating the DHT device
 DHTesp dht;
 
+  //Creating Water Objects
+  Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
 
 
@@ -133,7 +138,6 @@ Multi_Channel_Relay relay;
 Max517Dac   dac;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
 
@@ -158,50 +162,50 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 
 
 //This functions updates the DAC value when it is called
-void update_value(){
-    Serial.println("I am in the update Value");
-    newValue = true;
-    Serial.setTimeout(5000);
-
-    while(newValue==1){
-          Serial.println("New value must be true to be here");
-
-          Serial.println("Enter the new desired value: ");
-
-          if(Serial.available()){
-              Serial.println("Serial must be available to be here");
-              int read_data = Serial.parseInt();
-              Serial.print("Read Data is: ");
-              Serial.println(read_data);
-
-              if(read_data==0){
-                Serial.println("read_data is 0, so we will not change the output");
-
-              }else if(read_data==1111){
-                Serial.println("resting the DAC ouput to 0");
-                dac.resetOutput();
-                dacOutputValue = 0;
-              }else{
-                Serial.println("read_data is NOT 0");
-                dacOutputValue = read_data;
-              }
-          }
-          newValue = false;
-    }
-
-
-}
+//void update_value(){
+//    Serial.println("I am in the update Value");
+//    newValue = true;
+//    Serial.setTimeout(5000);
+//
+//    while(newValue==1){
+//          Serial.println("New value must be true to be here");
+//
+//          Serial.println("Enter the new desired value: ");
+//
+//          if(Serial.available()){
+//              Serial.println("Serial must be available to be here");
+//              int read_data = Serial.parseInt();
+//              Serial.print("Read Data is: ");
+//              Serial.println(read_data);
+//
+//              if(read_data==0){
+//                Serial.println("read_data is 0, so we will not change the output");
+//
+//              }else if(read_data==1111){
+//                Serial.println("resting the DAC ouput to 0");
+//                dac.resetOutput();
+//                dacOutputValue = 0;
+//              }else{
+//                Serial.println("read_data is NOT 0");
+//                dacOutputValue = read_data;
+//              }
+//          }
+//          newValue = false;
+//    }
+//
+//
+//}
 
 
 
 //Function to obtain the flow data
 uint8_t get_flow() {
 
-  pinMode(flowPin, INPUT);           //Sets the pin as an input
-  attachInterrupt(0, count++, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
+  pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
+  attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
 
-  count = 0;      // Reset the counter so we start counting from 0 again
+  count = 1;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
   delay (1000);   //Wait 1 second
   noInterrupts(); //Disable the interrupts on the Arduino
@@ -217,7 +221,9 @@ uint8_t get_flow() {
 
 
 
-
+void flow_interrupt(){
+  count++;
+}
 
 
 
@@ -289,7 +295,10 @@ NexTouch *nex_listen_list[] = {
  */
 void bDev1_OnPopCallback(void *ptr) {
   tState1.setText("State: on");
+  Serial.println("Turn on Relay Channel 1");
   relay.turn_on_channel(1);
+ 
+  
 }
 /*
  * Button bDev1_Off component pop callback function.
@@ -297,7 +306,9 @@ void bDev1_OnPopCallback(void *ptr) {
  */
 void bDev1_OffPopCallback(void *ptr) {
   tState1.setText("State: off");
-  relay.turn_off_channel(1);  ;
+  Serial.println("Turn off Relay Channel 1");
+  relay.turn_off_channel(1);  
+
 }
 /*
  * Button bDev2_On component pop callback function.
@@ -305,7 +316,9 @@ void bDev1_OffPopCallback(void *ptr) {
  */
 void bDev2_OnPopCallback(void *ptr) {
   tState2.setText("State: on");
- relay.turn_on_channel(2);
+  Serial.println("Turn on Relay Channel 2");
+  relay.turn_on_channel(2);
+ 
 }
 /*
  * Button bDev2_Off component pop callback function.
@@ -314,7 +327,9 @@ void bDev2_OnPopCallback(void *ptr) {
 
 void bDev2_OffPopCallback(void *ptr) {
   tState1.setText("State: off");
+  Serial.println("Turn off Relay Channel 2");
   relay.turn_off_channel(2);
+  
 }
 /*
  * Button bDev3_On component pop callback function.
@@ -322,7 +337,9 @@ void bDev2_OffPopCallback(void *ptr) {
  */
 void bDev3_OnPopCallback(void *ptr) {
   tState3.setText("State: on");
+  Serial.println("Turn on Relay Channel 3");
   relay.turn_on_channel(3);
+    
 }
 /*
  * Button bDev3_Off component pop callback function.
@@ -331,7 +348,9 @@ void bDev3_OnPopCallback(void *ptr) {
 
 void bDev3_OffPopCallback(void *ptr) {
   tState3.setText("State: off");
+  Serial.println("Turn off Relay Channel 3");
   relay.turn_off_channel(3);
+  
 }
 
 
@@ -351,8 +370,10 @@ void sDimmerPopCallback(void *ptr){
   utoa(number, temp, 10);
   tDval.setText(temp);
 
+    Serial.print("We are in the Dimmer callbak and the number value is: ");
+    Serial.println(number);
   //This function sets the DAC output to the correct level( 8 bit unsinged int; 0-255 levels )
-  dac.setOutput(dacOutputValue)
+  dac.setOutput(number);
 
 
 }
@@ -417,13 +438,9 @@ Date/Time, pH Reading, Water Temp, Water Level, Water Flow, Ambient Temp, Ambien
 */
 
 
-  dataString = "";
 
 
-    dataString += String(sensor);
-    dataString += ",";
-
-
+  
 
 //Water Environment Sensor Update
 
@@ -431,6 +448,10 @@ Date/Time, pH Reading, Water Temp, Water Level, Water Flow, Ambient Temp, Ambien
 
 void bUpdateSensor(){
 
+
+      Serial.println("We are in the UpdateSensor Function ");
+
+      
       //This reads the analog input and converts it to pH
       pH_Sensor_Value = analogRead(A0);
       pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
@@ -439,12 +460,10 @@ void bUpdateSensor(){
       pH = pH_Sensor_Reading;
 
       static char pHTemp[6];
-      dtostrf(pH, 6,2, pHTemp);
+      dtostrf(420, 6,2, pHTemp);
       tWater_pH.setText(pHTemp);
-
-    dataString += String(sensor);
-    dataString += String(sensor);
-    dataString += ",";
+    
+  // dataString =String(dataString + String(sensor) + ",");
 
 
 
@@ -462,7 +481,7 @@ void bUpdateSensor(){
       tWater_Lvl.setText(levelTemp);
 
       //Getting Water Flow
-      flow = get_flow();
+      flow =  get_flow();
       static char flowTemp[6];
       dtostrf(flow, 6, 2, flowTemp);
       tWater_Flow.setText(flowTemp);
@@ -474,7 +493,7 @@ void bUpdateSensor(){
       //Getting the DHT Temp
       TempF = dht.toFahrenheit(dht.getTemperature());
       static char temperatureFTemp[6];
-      dtostrf(TempF, 6, 2, temperatureFTemp);
+      dtostrf(666, 6, 2, temperatureFTemp);
       tAir_Temp.setText(temperatureFTemp);
 
 
@@ -515,7 +534,7 @@ void bUpdateSensor(){
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-//                                        MAIN                                                  //
+//                                     SETUP                                                //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup(void) {
@@ -532,51 +551,46 @@ void setup(void) {
   }
 
   timeClient.begin();
-  }
-
 
 
 
   Serial.print("Initializing SD card...");
 
   // see if the card is present and can be initialized:
-  if (!SD.begin(chipSelect)) {
+  if (!SD.begin(SD_CS)) {
     Serial.println("Card failed, or not present");
-    // don't do anything more:
-    while (1);
-  }
+   }
+  
   Serial.println("card initialized.");
 
   //This creates the relay object
-  relay.begin(0x11);
+//  relay.begin(0x11);
 
   // Reset the DAC output
-  if(!dac.resetOutput())
-   {
-      Serial.println("Error talking to DAC. Check wiring.");
-   }else{
-      Serial.println("DAC has been reset");
-  }
+//  if(!dac.resetOutput())
+//   {
+//      Serial.println("Error talking to DAC. Check wiring.");
+//   }else{
+//      Serial.println("DAC has been reset");
+//  }
 
-  //Creating Water Objects
-  Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 
   //creating Ambient objects
-  Wire.begin();
-    light_sens_1.begin();
-    light_sens_1.setGain(gain);
-    light_sens_1.setIntegTime(time_1);
-
-    light_sens_2.begin();
-    light_sens_2.setGain(gain);
-    light_sens_2.setIntegTime(time_1);
-
-    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
-
-
+//  Wire.begin();
+//    light_sens_1.begin();
+//    light_sens_1.setGain(gain);
+//    light_sens_1.setIntegTime(time_1);
+//
+//    light_sens_2.begin();
+//    light_sens_2.setGain(gain);
+//    light_sens_2.setIntegTime(time_1);
+//
+//    dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
 
 
 
+  Serial.println("");
+  Serial.println("Setting up Nextion Stuff");
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to
 //set the baudrate
   nexInit();
@@ -600,33 +614,58 @@ void setup(void) {
 //DATA UPLAOD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
 
+  Serial.println("");
+  Serial.println("Nextion Stuff Should be setup");
 
-//Set EXTERNAL DEVICES as outputs
-  pinMode(EX1, OUTPUT);
-  pinMode(EX2, OUTPUT);
-  pinMode(EX3, OUTPUT);
-  pinMode(UD1, OUTPUT);
+//
+////Set EXTERNAL DEVICES as outputs
+//  pinMode(EX1, OUTPUT);
+//  pinMode(EX2, OUTPUT);
+//  pinMode(EX3, OUTPUT);
+//  pinMode(UD1, OUTPUT);
 
 }
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     LOOP                                                //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 void loop(void) {
   /*
    * When a pop or push event occured every time,
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
-  counter = counter+1;
+ // counter = counter+1;
   timeClient.update();
 
 
   nexLoop(nex_listen_list);
-
-  if(timeClient.getMinutes() % 5 == 0){
-    bUpdateSensor();
-
+  
+  //This resets the trigger to true so that we get the next update in 5 mins 
+  if(timeClient.getMinutes() % 2 == 0&&timeClient.getSeconds()==5&&trigger==false){
+      trigger = true;
+      Serial.println("Reset Trigger to TRUE");
   }
 
 
+  //This checks the time and then if the trigger is true it will update the sensor data and set the trigger to false
+  // This ensures that we only call the function once in the desired time frame
+  if(timeClient.getMinutes() % 2 == 0&&timeClient.getSeconds()==4){
+      Serial.println("Time is right to update");
+     
+      if(trigger){
+        Serial.println("now we update data");
+         bUpdateSensor();
+         Serial.println("data should be updated");
+         trigger = false;
+         Serial.println("Reset Trigger to FALSE");
+      }else{
+         Serial.println("We have already updated");
 
-  // Serial.print(" The nexLoop is at ");
-  // Serial.println(count);
+        }
+     
+  }
 }
