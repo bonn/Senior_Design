@@ -251,15 +251,15 @@ NexText tAir_Light_1   = NexText (1, 17, "Light1");          //Text with light l
 NexText tAir_Light_2   = NexText (3, 10, "Light2");          //Text with light level 2 value.
 
 //External Devices
-NexButton bDev1_On  = NexButton (9, 10, "bDev1_On");   //Button to turn Dev1 ON (LED - EX1)
-NexButton bDev1_Off = NexButton (9, 11, "bDev1_off");  //Button to turn Dev1 OFF (LED - EX1)
-NexText   tState1   = NexText   (9, 9,  "tState1");    //Text to show Dev1 ON/OFF status.
-NexButton bDev2_On  = NexButton (9, 10, "bDev2_On");   //Button to turn Dev2 ON (AIR PUMP - EX2)
-NexButton bDev2_Off = NexButton (9, 11, "bDev2_off");  //Button to turn Dev2 OFF (AIR PUMP - EX2)
-NexText   tState2   = NexText   (9, 9,  "tState2");    //Text to show Dev2 ON/OFF status.
-NexButton bDev3_On  = NexButton (9, 10, "bDev3_On");   //Button to turn Dev3 ON (WATER PUMP - EX3)
-NexButton bDev3_Off = NexButton (9, 11, "bDev3_off");  //Button to turn Dev3 OFF (WATER PUMP - EX3)
-NexText   tState3   = NexText   (9, 9,  "tState3");    //Text to show Dev3 ON/OFF status.
+NexButton bDev1_On  = NexButton (9, 6,  "bDev1_On");   //Button to turn Dev1 ON (LED - EX1)
+NexButton bDev1_Off = NexButton (9, 7,  "bDev1_Off");  //Button to turn Dev1 OFF (LED - EX1)
+NexText   tState1   = NexText   (9, 5,  "tState1");    //Text to show Dev1 ON/OFF status.
+NexButton bDev2_On  = NexButton (9, 11, "bDev2_On");   //Button to turn Dev2 ON (AIR PUMP - EX2)
+NexButton bDev2_Off = NexButton (9, 12, "bDev2_Off");  //Button to turn Dev2 OFF (AIR PUMP - EX2)
+NexText   tState2   = NexText   (9, 10, "tState2");    //Text to show Dev2 ON/OFF status.
+NexButton bDev3_On  = NexButton (9, 15, "bDev3_On");   //Button to turn Dev3 ON (WATER PUMP - EX3)
+NexButton bDev3_Off = NexButton (9, 16, "bDev3_Off");  //Button to turn Dev3 OFF (WATER PUMP - EX3)
+NexText   tState3   = NexText   (9, 14, "tState3");    //Text to show Dev3 ON/OFF status.
 
 //Dimming Controls
 NexSlider sDimmer = NexSlider (9, 3, "sDimmer");      //Slider bar to ontrol EX1 - LED intensity.
