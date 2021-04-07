@@ -302,7 +302,7 @@ void bDev1_OnPopCallback(void *ptr) {
 //    Serial.write(0xFF);
 //    Serial.write(0xFF);
   
-  relay.turn_on_channel(1);
+  relay_test();
 
 
   
@@ -705,8 +705,6 @@ void create_devices()
   
   delay(500);  // for debugging
   
-  //This creates the relay object
-  relay.begin(0x11);
 
   Serial1.println("Relay Initialized.");
   delay(1500);  // for debugging
@@ -844,3 +842,16 @@ Serial.print("tState1.txt=");
   
   delay(2000);
 }
+
+void relay_test(){
+  
+    //This creates the relay object
+  relay.begin(0x11);
+
+
+  relay.turn_on_channel(1);  
+delay(2000);
+  relay.turn_off_channel(1);
+
+  
+  }
