@@ -1,3 +1,19 @@
+/*
+    GAIA Software
+    
+    Created by Patrick Schneider, Brandon Sanders, and Jordan Bonn
+*/
+
+/*
+ * NOTE:
+  Serial1 is used for debugging because the Tx and Rx from USB are the same as Serial
+
+  Serial1 is port D4 on the ESP8266
+
+  NODE MCU references: https://www.make-it.ca/nodemcu-arduino/nodemcu-details-specifications/
+                       https://robu.in/a-beginner-guide-to-nodemcu/
+  
+*/
 
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -558,18 +574,11 @@ delay(500);  // for debugging
 
 void setup(void) {
  
- Serial1.begin(9600);
-
+Serial1.begin(9600);
  create_devices();
-
-  
- delay(500);   // for debugging
-
-
-  Serial1.println("Setting up Nextion Stuff");
-  delay(500);   // for debugging
-
-
+delay(500);   // for debugging
+Serial1.println("Setting up Nextion Stuff");
+delay(500);   // for debugging
 
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to
 //set the baudrate
@@ -594,26 +603,16 @@ void setup(void) {
 //DATA UPLAOD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
 
-  Serial1.println("");
-  Serial1.println("Nextion Stuff Should be setup");
-
-
+Serial1.println("");
+Serial1.println("Nextion Stuff Should be setup");
   WiFi.begin(ssid, password);
-
   while ( WiFi.status() != WL_CONNECTED ) {
-  delay ( 500 );  // NOT for debugging
-  Serial1.print ( "." );
+      delay ( 500 );  // NOT for debugging
+      Serial1.print ( "." );
   }
-
-  timeClient.begin();
-
-
-
-
- 
+  timeClient.begin(); 
+  
 }
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //                                     LOOP                                                //
@@ -626,35 +625,30 @@ void loop(void) {
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
 
-   
-
-
- 
+  //updating the time client to get the current time
   timeClient.update();
 
-
+  //This is the function used to monitor the Nextion display for touch input
   nexLoop(nex_listen_list);
+  
   
   //This resets the trigger to true so that we get the next update in 5 mins 
   if(timeClient.getMinutes() % 1 == 0&&timeClient.getSeconds()==5&&trigger==false){
       trigger = true;
-      Serial1.println("Reset Trigger to TRUE");
+Serial1.println("Reset Trigger to TRUE");
   }
 
 
   //This checks the time and then if the trigger is true it will update the sensor data and set the trigger to false
   // This ensures that we only call the function once in the desired time frame
-  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds()==4){
-      if(trigger){
-        Serial1.println("now we update data");
+  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds()==4 && trigger){
+Serial1.println("now we update data");
          bUpdateSensor();
-         Serial1.println("data should be updated");
+Serial1.println("data should be updated");
          trigger = false;
-         Serial1.println("Reset Trigger to FALSE");
-      }else{
-         Serial1.println("___");
-
-        }
-     
+Serial1.println("Reset Trigger to FALSE");
+      
   }
+
+  
 }
