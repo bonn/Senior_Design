@@ -2,7 +2,7 @@
  * SimpleExample.ino
  *
  * This example demonstrates the usage of the MAX517 8-bit DAC library.
- * The diagram below shows the pinout of the 8 pin DIP version of the
+ * The diagram below shows the pinout of the 8 pin DIP version of the 
  * device and its connections to the Arduino Uno.
  *
  *         -------.   .-------
@@ -15,7 +15,7 @@
  *        |                   |
  *  A4 -->| SDA           AD1 |<-- GND
  *        |                   |
- *         -------------------
+ *         ------------------- 
  *
  * Copyright (c) 2012 Jordan Goulder. All rights reserved.
  *
@@ -36,9 +36,9 @@
 #include <Wire.h>
 #include <Max517Dac.h>
 
-
+const int   adcInputPin       = A0;    // Pin used to read analog input
+int         adcInputValue     = 0;     // Value read form ADC
 int         dacOutputValue    = 0;     // Value written to DAC
-
 
 // Create a new DAC object
 Max517Dac   dac;
@@ -46,7 +46,7 @@ Max517Dac   dac;
 void setup()
 {
    // Initialize the serial interface
-   Serial.begin(9600);
+   Serial.begin(9600); 
 
    // Reset the DAC output
    if(!dac.resetOutput())
@@ -58,27 +58,23 @@ void setup()
 void loop()
 {
    // Read the value of the ADC
-   if(255>dacOutputValue>0){
-	   dacOutputValue = dacOutputValue+17;
-   }else{
-	   dacOutputValue = 0;
-   }
+   adcInputValue = analogRead(adcInputPin);            
 
    // Convert the analog reading to an 8-bit value
-   
+   adcInputValue >>= 2;
 
    // Print out the values
    Serial.print("DAC Output: ");
    Serial.print(dacOutputValue);
-   
-   
+   Serial.print(", ADC Input: " );                       
+   Serial.println(adcInputValue);
+
    // Update the DAC with a new value
-   if (!dac.setOutput(dacOutputValue))
+   if (!dac.setOutput(++dacOutputValue))
    {
       Serial.println("Error talking to DAC. Check wiring.");
    }
-
+ 
    // Wait a little bit for things to settle out
-   delay(1500);
-   
+   delay(100);                     
 }

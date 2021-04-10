@@ -1,11 +1,11 @@
+
+
 // Patrick Schneider
 #include <ESP8266WiFi.h>
 #include <Nextion.h>
 #include "NexText.h"
 #include "NexButton.h"
 #include "NexSlider.h"
-
-
 
 //Jordan Bonn - For the Ambient Class
 #include <Wire.h>
@@ -24,13 +24,9 @@
 #include <SPI.h>
 #include <SD.h>
 
-
-
 #include "NTPClient.h"
 #include "ESP8266WiFi.h"
 #include "WiFiUdp.h"
-
-
 
 
 
@@ -39,43 +35,56 @@
 #define SensorPin A0          // the pH meter Analog output is connected with the Analog pin
 #define Offset 0.00
 
+//Defining the addresses for the lught sensors
 #define AL_ADDR_1 0x48
 #define AL_ADDR_2 0x10
 
-#define DHTPIN 9               // what digital pin we're connected to
+//defining the address of the DHT
+#define DHTPIN D0               // what digital pin we're connected to
 
-// Define LED, AIR PUMP, WATER PUMP pins
 
+// chip select pin for the SD Card
 const int SD_CS = 4;
 
+//Pin that is used for the water flow sensor
 const byte water_flow_pin = 10;            // GPIO pin for the water flow sensor
 
+
+//datastring created for logging files
 String     dataString = "";
 
 
 
+//variables for the LPS water temp and pressure sensor
 float temperature;
 float pressure;
 
+//variable for the flow sensor
 float flow;
 
+//variable for the pH sensor
 float pH;
 
+//variables for the DHT temp sensor
 float TempF;
 float humidity;
 
+//variables for the Lux sensor
 float lux1;
 float lux2;
 
+//variable used for logging data
 bool trigger;
 
 
-
+//variables used to store SSID info *NEEDS TO BE CHANGED TO UPDATE IN APP
 const char *ssid = "The Promised LAN";
 const char *password = "einstein418";
 
-const long utcOffsetInSeconds = 19800;
 
+//Offset for NTP time & date data
+const long utcOffsetInSeconds = 19800;
+//used for NTP
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 // Define NTP Client to get time
@@ -83,11 +92,13 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 
+
+
+
+
+
 //***********Setup for Ambient Class**************
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//Creating the device for the VEML sensor; we will use 2 sensors
-SparkFun_Ambient_Light light_sens_1(AL_ADDR_1);
-SparkFun_Ambient_Light light_sens_2(AL_ADDR_2);
 
 // Possible values: .125, .25, 1, 2
 // Both .125 and .25 should be used in most cases except darker rooms.
@@ -125,6 +136,9 @@ Max517Dac   dac;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+//Creating the device for the VEML sensor; we will use 2 sensors
+SparkFun_Ambient_Light light(AL_ADDR_1);
+SparkFun_Ambient_Light light_2(AL_ADDR_2);
 
 
 
@@ -194,11 +208,8 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 //Function to obtain the flow data
 uint8_t get_flow() {
 
-  pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
-  attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
-
-  count = 1;      // Reset the counter so we start counting from 0 again
+  count = 0;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
   delay (1000);   //Wait 1 second
   noInterrupts(); //Disable the interrupts on the Arduino
@@ -214,7 +225,7 @@ uint8_t get_flow() {
 
 
 
-void flow_interrupt(){
+ICACHE_RAM_ATTR void flow_interrupt(){
   count++;
 }
 
@@ -293,15 +304,7 @@ void bDev1_OnPopCallback(void *ptr) {
   
   tState1.setText("State: on");
   delay(500);//debugging
- 
-//Serial.print("tState1.txt=");
-//    Serial.print("\"");
-//    Serial.print("Hello");
-//    Serial.print("\"");
-//    Serial.write(0xFF);
-//    Serial.write(0xFF);
-//    Serial.write(0xFF);
-  
+ Serial1.println("Turn on Relay Channel 1");
   relay.turn_on_channel(1);
 
 
@@ -380,7 +383,7 @@ void sDimmerPopCallback(void *ptr){
     Serial1.print("We are in the Dimmer callbak and the number value is: ");
     Serial1.println(number);
   //This function sets the DAC output to the correct level( 8 bit unsinged int; 0-255 levels )
-  dac.setOutput(number);
+  dac.setOutput(255*(number/100));
 
 
 }
@@ -434,9 +437,6 @@ void bUploadPopCallback(void *ptr) {
 
 //This is creating the data string of the updated values that will be uploaded to SD
 
-
-
-
 /*
 CSV FORMAT
 
@@ -458,64 +458,85 @@ Date/Time, pH Reading, Water Temp, Water Level, Water Flow, Ambient Temp, Ambien
 
 void bUpdateSensor(){
 
-
       Serial1.println("We are in the UpdateSensor Function ");
-
        delay(500);  // for debugging
+   
+   Serial1.println("Starting the pH section");
+          delay(500);  // for debugging
       //This reads the analog input and converts it to pH
       pH_Sensor_Value = analogRead(A0);
       pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
       pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
-
-      pH = 69.420; // pH_Sensor_Reading;
-
+      pH =  pH_Sensor_Reading;     
       static char pHTemp[6];
       dtostrf(pH, 6,2, pHTemp);
       tWater_pH.setText(pHTemp);
+      delay(1500);  // for debugging
       
-delay(1500);  // for debugging
-      
-  // dataString =String(dataString + String(sensor) + ",");
+// dataString =String(dataString + String(sensor) + ",");
 
    Serial1.println("We completed in the pH Section");
+     delay(500);  // for debugging
 
-       delay(500);  // for debugging
-//
-//
-//      //Getting LPS35 water Temp
-//      temperature = lps35hw.readTemperature()* 9/5 + 32;
-//      static char temperatureWTemp[6];
-//      dtostrf(temperature, 6, 2, temperatureWTemp);
-//      tWater_Temp.setText(temperatureWTemp);
+Serial1.print("The Value is: ");
+Serial1.println(pH);
 
+
+   Serial1.println("Starting the LPS TEMP section");
+          delay(500);  // for debugging
+      //Getting LPS35 water Temp
+      temperature = lps35hw.readTemperature()* 9/5 + 32;
+      static char temperatureWTemp[6];
+      dtostrf(temperature, 6, 2, temperatureWTemp);
+      tWater_Temp.setText(temperatureWTemp);
 Serial1.println("We completed in the water temp Section");
+
+Serial1.print("The Value is: ");
+Serial1.println(temperature);
+       
        delay(1500);  // for debugging
 
-//
-//
-//      //Getting LPS53 Pressure data
+
+
+Serial1.println("Starting the LPS pressure section");
+  delay(500);  // for debugging
+
+      //Getting LPS53 Pressure data
       pressure = lps35hw.readPressure();
       static char levelTemp[6];
       dtostrf(pressure, 6, 2, levelTemp);
       tWater_Lvl.setText(levelTemp);
-
 Serial1.println("We completed in the water press Section");
 
+
+Serial1.print("The Value is: ");
+Serial1.println(levelTemp);
+
+
+
+
+Serial1.println("Starting the FLOW  section");
        delay(1500);  // for debugging
-
-
       //Getting Water Flow
-//      flow =  get_flow();
-//      static char flowTemp[6];
-//      dtostrf(flow, 6, 2, flowTemp);
-//      tWater_Flow.setText(flowTemp);
+        flow =  get_flow();
+        static char flowTemp[6];
+        dtostrf(flow, 6, 2, flowTemp);
+        tWater_Flow.setText(flowTemp);
 Serial1.println("We completed in the water flow Section");
+       Serial1.println("We are starting the  flow");
        delay(1500);  // for debugging
+
+       delay(1500);  // for debugging
+
+
+
 
 
 
 
       //Ambient Environment Sensor Update
+Serial1.println("We are starting the DHT TEMP");
+       delay(1500);  // for debugging
 
       //Getting the DHT Temp
       TempF = dht.toFahrenheit(dht.getTemperature()); //69.69;
@@ -527,7 +548,8 @@ Serial1.println("We completed in the air temp Section");
 Serial1.println(TempF);
        delay(1500);  // for debugging
 
-
+Serial1.println("We are starting the DHT HUM");
+delay(500);
       //Getting the DHT Humidity
       humidity = dht.getHumidity();
       static char humidityTemp[6];
@@ -541,18 +563,29 @@ Serial1.println(humidity);
        delay(1500);  // for debugging
 
       //Getting the lux readings
-//
-////      lux1 = light_sens_1.readLight();
-////      static char lux1Temp[6];
-////      dtostrf(lux1, 6, 2, lux1Temp);
-////      tAir_Light_1.setText(lux1Temp);
-//Serial1.println("We completed in the lux_1 temp Section");
-//    delay(500);  // for debugging
-//      lux2 = light_sens_2.readLight();
-//      static char lux2Temp[6];
-//      dtostrf(lux2, 6, 2, lux2Temp);
-//      tAir_Light_2.setText(lux2Temp);
+Serial1.println("We are starting the LUX 1");
+delay(500);
+      lux1 = light.readLight();
+      static char lux1Temp[6];
+      dtostrf(lux1, 6, 2, lux1Temp);
+      tAir_Light_1.setText(lux1Temp);
+Serial1.println("We completed in the lux_1 temp Section");
+
+
+Serial1.print("The Value is: ");
+Serial1.println(lux1);
+delay(500);
+Serial1.println("We are starting the LUX 2");
+delay(500);    
+    delay(500);  // for debugging
+      lux2 = light_2.readLight();
+      static char lux2Temp[6];
+      dtostrf(lux2, 6, 2, lux2Temp);
+      tAir_Light_2.setText(lux2Temp);
 Serial1.println("We completed in the lux_2  Section");
+
+Serial1.print("The Value is: ");
+Serial1.println(lux2);
        delay(500);  // for debugging
 
 }
@@ -576,12 +609,14 @@ Serial1.println("We completed in the lux_2  Section");
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup(void) {
+ 
+ Serial1.begin(9600);
 
-  create_devices();
+ create_devices();
 
+  
+ delay(500);   // for debugging
 
-
-  Serial1.begin(9600);
 
   Serial1.println("Setting up Nextion Stuff");
   delay(500);   // for debugging
@@ -642,7 +677,11 @@ void loop(void) {
    * When a pop or push event occured every time,
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
- // counter = counter+1;
+
+   
+
+
+ 
   timeClient.update();
 
 
@@ -676,171 +715,53 @@ void loop(void) {
 
 void create_devices()
 {
+ Serial1.println("Let's start up some sensors!");
+//////////////////////////////////////
+//Starting the Relay
+relay.begin(0x11);
 
-
-//Serial.print("tState1.txt=");
-//    Serial.print("\"");
-//    Serial.print("Hello");
-//    Serial.print("\"");
-//    Serial.write(0xFF);
-//    Serial.write(0xFF);
-//    Serial.write(0xFF);
+delay(500);
+//////////////////////////////////////
+//Starting LPS35HW device
+ if (!lps35hw.begin_I2C()) {
+    Serial1.println("Couldn't find LPS35HW chip");
+    while (1);
+  }
+  Serial1.println("Found LPS35HW chip");
   
-  Serial.begin(9600);  
+delay(500);  
+//////////////////////////////////////
+//Starting DHT Device
+dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
 
+delay(500);
+//////////////////////////////////////
+//Starting FLOW SENSOR
+pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
+attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
-  /////////////////////////////////////////
-  
-  
-  
-  
+delay(500);
+//////////////////////////////////////
+//Starting the Light Sensors
+  if(light.begin())
+    Serial1.println("Ready to sense some light!"); 
+  else
+    Serial1.println("Could not communicate with the sensor!");
 
-  Serial1.print("Initializing SD card...");
+    if(light_2.begin())
+    Serial1.println("Ready to sense some light!"); 
+  else
+    Serial1.println("Could not communicate with the sensor_2!");
 
-  // see if the card is present and can be initialized:
-  if (!SD.begin(SD_CS)) {
-    Serial1.println("Card failed, or not present");
-   }else{Serial1.println("card initialized.");
-   }
-  
-  delay(500);  // for debugging
-  
-  //This creates the relay object
-  relay.begin(0x11);
+delay(500);
+//////////////////////////////////////
+//Starting the DAC
 
-  Serial1.println("Relay Initialized.");
-  delay(1500);  // for debugging
-
-//   Reset the DAC output
-  if(!dac.resetOutput())
+ if(!dac.resetOutput())
    {
       Serial1.println("Error talking to DAC. Check wiring.");
    }else{
-      Serial1.println("DAC has been reset");
-  }
-//  Serial1.println("DAC initialized.");
-  delay(500);  // for debugging
+      Serial1.println("Was able to talk to DAC. No Issue.");
+    }
 
-//  creating Ambient objects
-  Wire.begin();
-    light_sens_1.begin();
-    light_sens_1.setGain(gain);
-    light_sens_1.setIntegTime(time_1);
-
-    light_sens_2.begin();
-    light_sens_2.setGain(gain);
-    light_sens_2.setIntegTime(time_1);
-
-    
-  Serial1.println("Light sensors initialized.");
-  delay(500);  // for debugging
-
-  
-  dht.setup(10, DHTesp::DHT22); // Connect DHT sensor to GPIO 10
-
-  Serial1.println("DHT initialized.");
-
-
-  Serial1.println(dht.toFahrenheit(dht.getTemperature()));
-
-
-  
-  delay(500);  // for debugging
-Serial.print("tAir_Temp.txt=");
-    Serial.print("\"");
-    Serial.print("420");
-    Serial.print("\"");
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-  
-
-  Serial1.println("");
-  
-  
-  
-  
-  ////////////////////////////////////////////////////////
-
-
-
-
-
-  /* Begin Controlling Relay */ 
-//  DEBUG_PRINT.println("Channel 1 on");
-  relay.turn_on_channel(1);  
-  
-  delay(2500);
-
-Serial.print("tState1.txt=");
-    Serial.print("\"");
-    Serial.print("Hello");
-    Serial.print("\"");
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-  
-  
-//  DEBUG_PRINT.println("Channel 2 on");
-  relay.turn_off_channel(1);
-  relay.turn_on_channel(2);
-  delay(1500);
-
-
-  Serial.print("tState2.txt=");
-    Serial.print("\"");
-    Serial.print("There");
-    Serial.print("\"");
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-  
-//  DEBUG_PRINT.println("Channel 3 on");
-  relay.turn_off_channel(2);
-  relay.turn_on_channel(3);  
-  delay(1500);
-
-    Serial.print("tState3.txt=");
-    Serial.print("\"");
-    Serial.print("Friendo");
-    Serial.print("\"");
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-    Serial.write(0xFF);
-  
-//  DEBUG_PRINT.println("Channel 4 on");
-  relay.turn_off_channel(3);
-  relay.turn_on_channel(4);  
-  delay(1500);
-  relay.turn_off_channel(4);
-
-  relay.channelCtrl(CHANNLE1_BIT | 
-                    CHANNLE2_BIT | 
-                    CHANNLE3_BIT | 
-                    CHANNLE4_BIT);
-//  DEBUG_PRINT.print("Turn all channels on, State: ");
-//  DEBUG_PRINT.println(relay.getChannelState(), BIN);
-  
-  delay(2300);
-
-  relay.channelCtrl(CHANNLE1_BIT |                   
-                    CHANNLE3_BIT);
-//  DEBUG_PRINT.print("Turn 1 3 channels on, State: ");
-//  DEBUG_PRINT.println(relay.getChannelState(), BIN);
-
-  delay(2300);
-
-  relay.channelCtrl(CHANNLE2_BIT | 
-                    CHANNLE4_BIT);
-//  DEBUG_PRINT.print("Turn 2 4 channels on, State: ");
-//  DEBUG_PRINT.println(relay.getChannelState(), BIN);
-//  
-  delay(2000);
-
-
-  relay.channelCtrl(0);
-//  DEBUG_PRINT.print("Turn off all channels, State: ");
-//  DEBUG_PRINT.println(relay.getChannelState(), BIN);
-  
-  delay(2000);
 }
