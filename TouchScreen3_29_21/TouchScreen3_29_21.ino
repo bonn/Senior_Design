@@ -223,27 +223,15 @@ ICACHE_RAM_ATTR void flow_interrupt(){
 void create_devices()
 {
  Serial1.println("Let's start up some sensors!");
-//////////////////////////////////////
+
 //Starting the Relay
 relay.begin(0x11);
-//
-//delay(500);
+
 
 //Starting DHT Device
 dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
 
-//delay(2000);
-//DHT_temperature=dht.getTemperature();
-//DHT_humidity=dht.getHumidity();
-//Serial1.print("The DHT is showing a temp of: ");
-//Serial1.println(DHT_temperature);
-//Serial1.print("The DHT is showing a humidity of: ");
-//Serial1.println(DHT_humidity);
 
-
-
-
-//////////////////////////////////////
 //Starting LPS35HW device
  if (!lps35hw.begin_I2C()) {
     Serial1.println("Couldn't find LPS35HW chip");
@@ -251,21 +239,13 @@ dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
   }
   Serial1.println("Found LPS35HW chip");
   
-//delay(2000);  
-//////////////////////////////////////
-//DHT
 
-//Serial1.print("The DHT Reports the temp at: ");
-////delay(dht.getMinimumSamplingPeriod());
-//Serial1.print(dht.getTemperature());
-//Serial1.println(" C");
-//////////////////////////////////////
 //Starting FLOW SENSOR
 pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
 attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
-//delay(500);
-//////////////////////////////////////
+
+
 //Starting the Light Sensors
   if(light.begin())
     Serial1.println("Ready to sense some light!"); 
@@ -276,9 +256,9 @@ attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrup
     Serial1.println("Ready to sense some light!"); 
   else
     Serial1.println("Could not communicate with the sensor_2!");
-//
-//delay(500);
-//////////////////////////////////////
+
+
+
 //Starting the DAC
 
  if(!dac.resetOutput())
@@ -324,11 +304,22 @@ NexText   tState3   = NexText   (9, 13, "tState3");    //Text to show Dev3 ON/OF
 
 //Dimming Controls
 NexSlider sDimmer = NexSlider (9, 3, "sDimmer");      //Slider bar to control  LED intensity.
-//NexText   tDval   = NexText   (9,19, "tDval");        //Text to show value the slider is holding.
+
+
+
+
+/////////////////******************************|||||||PROBLEMS|||||||||*************************/////////////////////////
+
 
 //Upload sensor data sensors
-NexButton bUpload = NexButton(9, 17, "bUpload_button");   //Button to upload data (UD1)
 
+
+NexButton bUpload = NexButton(9, 17, "bUpload");   //Button to upload data (UD1)
+
+
+NexButton bTest  = NexButton (9, 20, "bTest");   //Button to Test
+
+/////////////////******************************|||||||||||||||||||||||*************************/////////////////////////
 
 // Register a button object to the touch event list.
 NexTouch *nex_listen_list[] = {
@@ -339,6 +330,7 @@ NexTouch *nex_listen_list[] = {
   &bDev2_Off,
   &bDev3_On,
   &bDev3_Off,
+  &bTest,
   &sDimmer,
   &bUpload,
 
@@ -404,6 +396,7 @@ void bDev2_OffPopCallback(void *ptr) {
 void bDev3_OnPopCallback(void *ptr) {
   tState3.setText("State: on");
   Serial1.println("Turn on Relay Channel 3");
+  Serial1.println();
   relay.turn_on_channel(3);
     
 }
@@ -454,6 +447,9 @@ Serial1.println(" of 255.");
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void bUploadPopCallback(void *ptr) {
+
+delay(500);
+  
   Serial1.println("Inside the upload function");
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -473,8 +469,18 @@ void bUploadPopCallback(void *ptr) {
   else {
     Serial1.println("error opening datalog.txt");
   }
+
+  delay(500);
+  
 }
 
+
+
+
+void bTestPopCallback(void *ptr) {
+   Serial1.println("Inside the TEST button PopCallback function");
+  
+}
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                   UPDATE SENSOR VARIABLES                                     // 
@@ -749,7 +755,11 @@ bUpdateSensorValues();
 //set the baudrate
   nexInit();
 
-//Register the pop event callback function of the components
+/*
+
+In here we attach the PopCallback functions to the buttons themselves
+Register the pop event callback function of the components
+*/
 //EX1
   bDev1_On.attachPop(bDev1_OnPopCallback, &bDev1_On);
   bDev1_Off.attachPop(bDev1_OffPopCallback, &bDev1_Off);
@@ -768,23 +778,24 @@ bUpdateSensorValues();
 //DATA UPLOAD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
 
-
-
-
-
-bUpdateDisplay();
+//EX3
+  bTest.attachPop(bTestPopCallback, &bTest);
 
 
 Serial1.println("");
 Serial1.println("Nextion Stuff Should be setup");
+
+
   WiFi.begin(ssid, password);
   while ( WiFi.status() != WL_CONNECTED ) {
       delay ( 500 );  // NOT for debugging
       Serial1.print ( "." );
   }
   
- 
+  
   timeClient.begin(); 
+  bUpdateDisplay();
+
   
 }
 
