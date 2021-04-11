@@ -101,6 +101,8 @@ float humidity;
 float DHT_humidity;
 float DHT_temperature;
 
+TempAndHumidity measurement;
+
 
 
 //variables for the Lux sensor
@@ -224,19 +226,19 @@ void create_devices()
 //////////////////////////////////////
 //Starting the Relay
 relay.begin(0x11);
-
-delay(500);
+//
+//delay(500);
 
 //Starting DHT Device
 dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
 
-delay(2000);
-DHT_temperature=dht.getTemperature();
-DHT_humidity=dht.getHumidity();
-Serial1.print("The DHT is showing a temp of: ");
-Serial1.println(DHT_temperature);
-Serial1.print("The DHT is showing a humidity of: ");
-Serial1.println(DHT_humidity);
+//delay(2000);
+//DHT_temperature=dht.getTemperature();
+//DHT_humidity=dht.getHumidity();
+//Serial1.print("The DHT is showing a temp of: ");
+//Serial1.println(DHT_temperature);
+//Serial1.print("The DHT is showing a humidity of: ");
+//Serial1.println(DHT_humidity);
 
 
 
@@ -249,20 +251,20 @@ Serial1.println(DHT_humidity);
   }
   Serial1.println("Found LPS35HW chip");
   
-delay(2000);  
+//delay(2000);  
 //////////////////////////////////////
 //DHT
 
-Serial1.print("The DHT Reports the temp at: ");
-//delay(dht.getMinimumSamplingPeriod());
-Serial1.print(dht.getTemperature());
-Serial1.println(" C");
+//Serial1.print("The DHT Reports the temp at: ");
+////delay(dht.getMinimumSamplingPeriod());
+//Serial1.print(dht.getTemperature());
+//Serial1.println(" C");
 //////////////////////////////////////
 //Starting FLOW SENSOR
 pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
 attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
 
-delay(500);
+//delay(500);
 //////////////////////////////////////
 //Starting the Light Sensors
   if(light.begin())
@@ -274,8 +276,8 @@ delay(500);
     Serial1.println("Ready to sense some light!"); 
   else
     Serial1.println("Could not communicate with the sensor_2!");
-
-delay(500);
+//
+//delay(500);
 //////////////////////////////////////
 //Starting the DAC
 
@@ -325,7 +327,8 @@ NexSlider sDimmer = NexSlider (9, 3, "sDimmer");      //Slider bar to control  L
 //NexText   tDval   = NexText   (9,19, "tDval");        //Text to show value the slider is holding.
 
 //Upload sensor data sensors
-NexButton bUpload = NexButton(9,17, "bUpload");   //Button to upload data (UD1)
+NexButton bUpload = NexButton(9, 17, "bUpload_button");   //Button to upload data (UD1)
+
 
 // Register a button object to the touch event list.
 NexTouch *nex_listen_list[] = {
@@ -451,12 +454,11 @@ Serial1.println(" of 255.");
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void bUploadPopCallback(void *ptr) {
-
+  Serial1.println("Inside the upload function");
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
-   Serial1.println("Inside the upload function");
-
+  
      bUpdateSensorValues();
      bUpdateDisplay();
 
@@ -505,7 +507,7 @@ void bUpdateSensorValues(){
 //  Serial.write(0xff);
 
 Serial1.println("We are in the UpdateSensorValues Function ");
-delay(5000);  // for debugging
+//delay(5000);  // for debugging
 
       //This reads the analog input and converts it to pH
       pH_Sensor_Value = analogRead(A0);
@@ -515,7 +517,7 @@ delay(5000);  // for debugging
 Serial1.println("We completed in the pH Section");
 Serial1.print("The Value is: ");
 Serial1.println(pH);
-delay(1000);  // for debugging
+//delay(1000);  // for debugging
 
      
       //Getting LPS35 water Temp
@@ -523,7 +525,7 @@ delay(1000);  // for debugging
 Serial1.println("We completed in the water temp Section");
 Serial1.print("The Value is: ");
 Serial1.println(temperature);
-delay(1000);  // for debugging
+//delay(1000);  // for debugging
 
 
       //Getting LPS53 Pressure data
@@ -531,7 +533,7 @@ delay(1000);  // for debugging
 Serial1.println("We completed in the water pressure Section");
 Serial1.print("The Value is: ");
 Serial1.println(pressure);
-delay(1000);  // for debugging
+//delay(1000);  // for debugging
 
 
       //Getting Water Flow
@@ -540,12 +542,15 @@ Serial1.println("We are starting the  flow");
 Serial1.println("flow ended");      
 Serial1.println("We completed in the water flow Section");
 
-delay(1000);  // for debugging
+//delay(1000);  // for debugging
+//
 
+    //Getting the DHT Temp & Humidity
+    measurement =dht.getTempAndHumidity();
+    
+    DHT_temperature = measurement.temperature;
+    DHT_humidity = measurement.humidity;
 
-    //Getting the DHT Temp
-DHT_temperature=dht.getTemperature();
-DHT_humidity=dht.getHumidity();
 Serial1.print("The DHT is showing a temp of: ");
 Serial1.println(DHT_temperature);
 Serial1.print("The DHT is showing a humidity of: ");
@@ -555,28 +560,28 @@ Serial1.println(DHT_humidity);
     TempF = dht.toFahrenheit(DHT_temperature);
 Serial1.println("We completed in the air temp Section");
 Serial1.println(TempF);
-delay(1000);  // for debugging
-
+//delay(1000);  // for debugging
+//
 
     //Getting the DHT Humidity
-    humidity = dht.getHumidity();
+    humidity = DHT_humidity;
 Serial1.println("We completed in the air hum Section");
 Serial1.println(humidity);
-delay(1000);  // for debugging
-
+//delay(1000);  // for debugging
+//
 
       //Getting the lux readings
       lux1 = light.readLight();
 Serial1.println("We completed in the lux_1 temp Section");
 Serial1.print("The Value is: ");
 Serial1.println(lux1);
-delay(1000);
+//delay(1000);
 
       lux2 = light_2.readLight();
 Serial1.println("We completed in the lux_2  Section");
 Serial1.print("The Value is: ");
 Serial1.println(lux2);
-delay(1000);  // for debugging
+//delay(1000);  // for debugging
 
 }
 
@@ -614,11 +619,11 @@ void bUpdateDisplay(){
 
 
 Serial1.println("We are in the UpdateDisplayData Function ");
-delay(5000);  // for debugging  
+//delay(5000);  // for debugging  
 
 //Updating the pH variable
 Serial1.println("Starting the pH section");
-delay(500);  // for debugging
+//delay(500);  // for debugging
 
       static char pHTemp[6];
       dtostrf(pH, 6,2, pHTemp);
@@ -626,7 +631,7 @@ delay(500);  // for debugging
  
 // dataString =String(dataString + String(sensor) + ",");
 Serial1.println("We updated the pH Section");
-delay(500);  // for debugging
+//delay(500);  // for debugging
 Serial1.print("The Value should be: ");
 Serial1.println(pHTemp);
 
@@ -635,8 +640,8 @@ Serial1.println(pHTemp);
 
 //Updating the LPS variables
 Serial1.println("Starting the LPS TEMP section");
-delay(500);  // for debugging
-      
+//delay(500);  // for debugging
+//      
       static char temperatureWTemp[6];
       dtostrf(temperature, 6, 2, temperatureWTemp);
       tWater_Temp.setText(temperatureWTemp);
@@ -644,11 +649,11 @@ delay(500);  // for debugging
 Serial1.println("We updated the water temp ");
 Serial1.print("The Value should be: ");
 Serial1.println(temperatureWTemp);
-delay(1500);  // for debugging
+//delay(1500);  // for debugging
 
 Serial1.println("Starting the LPS pressure section");
-  delay(500);  // for debugging
-    
+//  delay(500);  // for debugging
+//    
       static char levelTemp[6];
       dtostrf(pressure, 6, 2, levelTemp);
       tWater_Lvl.setText(levelTemp);
@@ -660,8 +665,8 @@ Serial1.println(levelTemp);
 
 //Updating the FLOW variables
 Serial1.println("Starting the FLOW  section");
-delay(1500);  // for debugging
-    
+//delay(1500);  // for debugging
+//    
         static char flowTemp[6];
         dtostrf(flow, 6, 2, flowTemp);
         tWater_Flow.setText(flowTemp);
@@ -669,13 +674,13 @@ delay(1500);  // for debugging
 Serial1.println("We updatd the water flow ");
 Serial1.print("The Value should be : ");
 Serial1.println(flowTemp);
-delay(1500);  // for debugging
+//delay(1500);  // for debugging
 
 
 
 //Updating the DHT variables
 Serial1.println("We are starting the DHT TEMP");
-delay(1500);  // for debugging
+//delay(1500);  // for debugging
 
       static char temperatureFTemp[6];
       dtostrf(TempF, 6, 2, temperatureFTemp);
@@ -684,10 +689,10 @@ delay(1500);  // for debugging
 Serial1.println("We updated the air temp");
 Serial1.print("The Value should be : ");
 Serial1.println(temperatureFTemp);
-delay(1500);  // for debugging
+//delay(1500);  // for debugging
 
 Serial1.println("We are starting the DHT HUM");
-delay(500);
+//delay(500);
 
       static char humidityTemp[6];
       dtostrf(humidity, 6, 2, humidityTemp);
@@ -696,14 +701,14 @@ delay(500);
 Serial1.println("We updated the air hum");
 Serial1.print("The Value should be : ");
 Serial1.println(humidityTemp);
-delay(1500);  // for debugging
-
+//delay(1500);  // for debugging
+//
 
 
       //Getting the lux readings
 Serial1.println("We are starting the LUX 1");
-delay(500);
-    
+//delay(500);
+//    
       static char lux1Temp[6];
       dtostrf(lux1, 6, 2, lux1Temp);
       tAir_Light_1.setText(lux1Temp);
@@ -711,10 +716,10 @@ delay(500);
 Serial1.println("We udpated the lux_1 ");
 Serial1.print("The Value should be: ");
 Serial1.println(lux1Temp);
-delay(500);
+//delay(500);
 Serial1.println("We are starting the LUX 2");    
-delay(500);  // for debugging
-      
+//delay(500);  // for debugging
+//      
       static char lux2Temp[6];
       dtostrf(lux2, 6, 2, lux2Temp);
       tAir_Light_2.setText(lux2Temp);
@@ -722,7 +727,7 @@ delay(500);  // for debugging
 Serial1.println("We udpated the lux_2 ");
 Serial1.print("The Value should be: ");
 Serial1.println(lux2Temp);
-delay(500);  // for debugging
+//delay(500);  // for debugging
 }
 
 
@@ -737,6 +742,8 @@ Serial1.begin(9600);
 delay(500);   // for debugging
 Serial1.println("Setting up Nextion Stuff");
 delay(500);   // for debugging
+
+bUpdateSensorValues();
 
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to
 //set the baudrate
@@ -758,8 +765,15 @@ delay(500);   // for debugging
 //EX1 DIMMER
   sDimmer.attachPop(sDimmerPopCallback, &sDimmer);
 
-//DATA UPLAOD
+//DATA UPLOAD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
+
+
+
+
+
+bUpdateDisplay();
+
 
 Serial1.println("");
 Serial1.println("Nextion Stuff Should be setup");
@@ -768,6 +782,8 @@ Serial1.println("Nextion Stuff Should be setup");
       delay ( 500 );  // NOT for debugging
       Serial1.print ( "." );
   }
+  
+ 
   timeClient.begin(); 
   
 }
