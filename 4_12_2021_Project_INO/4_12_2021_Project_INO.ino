@@ -1120,6 +1120,7 @@ Serial1.println("now we update data");
          bUpdateSensorValues();
 Serial1.println("data should be updated, now we will update the display");
          bUpdateDisplay();
+         trigger = false;
 Serial1.println("display should be updated");     
 //  }
 
