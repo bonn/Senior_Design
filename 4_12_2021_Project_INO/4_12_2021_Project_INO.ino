@@ -6,7 +6,7 @@
 
 /*
  * NOTE:
-  Serial1 is used for debugging because the Tx and Rx from USB are the same as Serial
+  Serial1 is used for debugging because the Tx and Rx from USB are the same as Serial on the ESP8266
 
   Serial1 is port D4 on the ESP8266
 
@@ -16,10 +16,13 @@
 */
 
 
+
+
+
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                        Libraries to Import                                    // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Patrick Schneider
+
 #include <ESP8266WiFi.h>
 #include <Nextion.h>
 #include "NexText.h"
@@ -63,11 +66,38 @@
 #define AL_ADDR_2 0x10
 
 //defining the address of the DHT
-#define DHTPIN D0               // what digital pin we're connected to
+#define DHTPIN 16               // what digital pin we're connected to
 
 //defining SD card pin
 const int SD_CS = 0;   // chip select pin for the SD Card
 
+
+
+
+
+
+
+//Variables for the alert sensors
+int alerts_water_temp_min,
+    alerts_water_temp_max,
+    alerts_water_ph_min,
+    alerts_water_ph_max,
+    alerts_ambient_temp_min,
+    alerts_ambient_temp_max;
+
+//Variables for the scheduling
+String schedules_water_start,
+       schedules_water_end,
+       schedules_air_start,
+       schedules_air_end,
+       schedules_light_start,
+       schedules_light_end;
+
+char buffer[100] = {0};
+
+
+bool simulate_Sunlight;
+uint32_t sun_state;
 
 
 //Pin that is used for the water flow sensor
@@ -82,7 +112,8 @@ String     the_time;
 
 String formatted_Date="";
 String dayStamp="";
-String timeStamp="";                                               
+String timeStamp="";   
+long epoch;                                            
 
 
 
@@ -309,6 +340,7 @@ attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrup
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
 //Nextion objects - Example (page id = 0, component id = 1, component name = "b0")
 
 
@@ -325,29 +357,29 @@ attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrup
 
 //*************PAGE_1**********************************************************************************************
 //Water Monitoring values
-NexText tWater_Temp_page_1  = NexText (1, 11, "tWater_Temp");  //Text with water temperature value.
-NexText tWater_Lvl_page_1   = NexText (1, 12, "tWater_Lvl");   //Text with water level value.
-NexText tWater_Flow_page_1  = NexText (1, 13, "tWater_Flow");  //Text with water flow value.
-NexText tWater_pH_page_1    = NexText (1, 14, "tWater_pH");         //Text with water pH value.
+NexText tWater_Temp_page_1      = NexText (1, 11, "tWater_Temp");  //Text with water temperature value.
+NexText tWater_Lvl_page_1       = NexText (1, 12, "tWater_Lvl");   //Text with water level value.
+NexText tWater_Flow_page_1      = NexText (1, 13, "tWater_Flow");  //Text with water flow value.
+NexText tWater_pH_page_1        = NexText (1, 14, "tWater_pH");         //Text with water pH value.
 
 //Ambient Environment values
-NexText tAir_Temp_page_1      = NexText (1, 15, "tAir_Temp");       //Text with air temperature value.
-NexText tAir_Humidity_page_1  = NexText (1, 16, "tAir_Humidity");   //Text with humidity value.
-NexText tAir_Light_1_page_1   = NexText (1, 17, "tAir_Light_1");    //Text with light level 1 value.
+NexText tAir_Temp_page_1        = NexText (1, 15, "tAir_Temp");       //Text with air temperature value.
+NexText tAir_Humidity_page_1    = NexText (1, 16, "tAir_Humidity");   //Text with humidity value.
+NexText tAir_Light_1_page_1     = NexText (1, 17, "tAir_Light_1");    //Text with light level 1 value.
 //NexText tAir_Light_2_page_1   = NexText (1, 40, "light2_var");    //Text with light level 2 value.
 
 
 //*************PAGE_2**********************************************************************************************
 //Water Monitoring values
-NexText tWater_Temp_page_2   = NexText (2, 11, "tWater_Temp");  //Text with water temperature value.
-NexText tWater_Lvl_page_2    = NexText (2, 12, "tWater_Lvl");   //Text with water level value.
-NexText tWater_Flow_page_2   = NexText (2, 13, "tWater_Flow");  //Text with water flow value.
-NexText tWater_pH_page_2     = NexText (2, 14, "tWater_pH");         //Text with water pH value.
+NexText tWater_Temp_page_2       = NexText (2, 11, "tWater_Temp");  //Text with water temperature value.
+NexText tWater_Lvl_page_2        = NexText (2, 12, "tWater_Lvl");   //Text with water level value.
+NexText tWater_Flow_page_2       = NexText (2, 13, "tWater_Flow");  //Text with water flow value.
+NexText tWater_pH_page_2         = NexText (2, 14, "tWater_pH");         //Text with water pH value.
 
 //Ambient Environment values
-NexText tAir_Temp_page_2       = NexText (2, 15, "tAir_Temp");       //Text with air temperature value.
-NexText tAir_Humidity_page_2   = NexText (2, 16, "tAir_Humidity");   //Text with humidity value.
-NexText tAir_Light_2_page_2    = NexText (2, 17, "tAir_Light_2");    //Text with light level 2 value.
+NexText tAir_Temp_page_2         = NexText (2, 15, "tAir_Temp");       //Text with air temperature value.
+NexText tAir_Humidity_page_2     = NexText (2, 16, "tAir_Humidity");   //Text with humidity value.
+NexText tAir_Light_2_page_2      = NexText (2, 17, "tAir_Light_2");    //Text with light level 2 value.
 //NexText tAir_Light_1_page_2    = NexText (2, 40, "light1_var");    //Text with light level 1 value.
 
 //*************PAGE_3********************************************************************************************
@@ -358,22 +390,22 @@ NexText tWater_Flow_page_3  = NexText (3, 13, "tWater_Flow");  //Text with water
 NexText tWater_pH_page_3    = NexText (3, 14, "tWater_pH");         //Text with water pH value.
 
 //Ambient Environment values
-NexText tAir_Temp_page_3      = NexText (3, 15, "tAir_Temp");       //Text with air temperature value.
-NexText tAir_Humidity_page_3  = NexText (3, 16, "tAir_Humidity");   //Text with humidity value.
-NexText tAir_Light_1_page_3   = NexText (3, 17, "tAir_Light_1");    //Text with light level 1 value.
+NexText tAir_Temp_page_3        = NexText (3, 15, "tAir_Temp");       //Text with air temperature value.
+NexText tAir_Humidity_page_3    = NexText (3, 16, "tAir_Humidity");   //Text with humidity value.
+NexText tAir_Light_1_page_3     = NexText (3, 17, "tAir_Light_1");    //Text with light level 1 value.
 //NexText tAir_Light_2_page_3   = NexText (3, 40, "light2_var");    //Text with light level 2 value.
 
 //*************PAGE_4**********************************************************************************************
 //Water Monitoring values
-NexText tWater_Temp_page_4   = NexText (4, 11, "tWater_Temp");  //Text with water temperature value.
-NexText tWater_Lvl_page_4    = NexText (4, 12, "tWater_Lvl");   //Text with water level value.
-NexText tWater_Flow_page_4   = NexText (4, 13, "tWater_Flow");  //Text with water flow value.
-NexText tWater_pH_page_4    = NexText (4, 14, "tWater_pH");         //Text with water pH value.
+NexText tWater_Temp_page_4    = NexText (4, 11, "tWater_Temp");  //Text with water temperature value.
+NexText tWater_Lvl_page_4     = NexText (4, 12, "tWater_Lvl");   //Text with water level value.
+NexText tWater_Flow_page_4    = NexText (4, 13, "tWater_Flow");  //Text with water flow value.
+NexText tWater_pH_page_4      = NexText (4, 14, "tWater_pH");         //Text with water pH value.
 
 //Ambient Environment values
-NexText tAir_Temp_page_4      = NexText (4, 15, "tAir_Temp");       //Text with air temperature value.
-NexText tAir_Humidity_page_4  = NexText (4, 16, "tAir_Humidity");   //Text with humidity value.
-NexText tAir_Light_2_page_4   = NexText (4, 17, "tAir_Light_2");    //Text with light level 2 value.
+NexText tAir_Temp_page_4        = NexText (4, 15, "tAir_Temp");       //Text with air temperature value.
+NexText tAir_Humidity_page_4    = NexText (4, 16, "tAir_Humidity");   //Text with humidity value.
+NexText tAir_Light_2_page_4     = NexText (4, 17, "tAir_Light_2");    //Text with light level 2 value.
 //NexText tAir_Light_1_page_4   = NexText (4, 40, "light1_var");    //Text with light level 1 value.
 
 
@@ -396,10 +428,41 @@ NexButton bDev3_On  = NexButton (9, 15, "bDev3_On");   //Button to turn Dev3 ON 
 NexButton bDev3_Off = NexButton (9, 16, "bDev3_Off");  //Button to turn Dev3 OFF (WATER PUMP - channel 3)
 
 //Dimming Controls
-NexSlider sDimmer = NexSlider (9, 3, "sDimmer");      //Slider bar to control  LED intensity.
+NexSlider sDimmer   = NexSlider (9, 3, "sDimmer");      //Slider bar to control  LED intensity.
 
 //Upload sensor data sensors
-NexButton bUpload = NexButton(9, 18, "bUpload");   //Button to upload data (UD1)
+NexButton bUpload   = NexButton(9, 18, "bUpload");   //Button to upload data (UD1)
+
+
+///***********************************************************************************************************************
+//************ALERTS_PAGE***********************************************************************************************
+ 
+NexText   tempMinW       = NexText   (11, 14,  "tempMinW");    
+NexText   tempMaxW       = NexText   (11, 15,  "tempMaxW");  
+  
+NexText   phMin          = NexText   (11, 16,  "phMin");    
+NexText   phMax          = NexText   (11, 17,  "phMax");  
+  
+NexText   tempMinA       = NexText   (11, 19,  "tempMinA");   
+NexText   tempMaxA       = NexText   (11, 18,  "tempMaxA");   
+
+NexButton bSet_Alerts    = NexButton (11, 13,  "bSet_Alerts");   //Button to turn Dev1 ON (LED - channel 1)
+
+///***********************************************************************************************************************
+//************SCHEDULES_PAGE***********************************************************************************************
+ 
+NexText   water_start     = NexText   (13, 11,  "water_start");    //Text to show Dev1 ON/OFF status.
+NexText   water_end       = NexText   (13, 16,  "water_end");    //Text to show Dev1 ON/OFF status.
+
+NexText   air_start       = NexText   (13, 12,  "air_start");    //Text to show Dev1 ON/OFF status.
+NexText   air_end         = NexText   (13, 15,  "air_end");    //Text to show Dev1 ON/OFF status.
+
+NexText   light_start     = NexText   (13, 13,  "light_start");    //Text to show Dev1 ON/OFF status.
+NexText   light_end       = NexText   (13, 14,  "light_end");    //Text to show Dev1 ON/OFF status.
+
+NexDSButton simulateSun   = NexDSButton(13, 17, "simulateSun");  //simulateSun.getValue(&sun_state);
+
+NexButton bSet_Schedule   = NexButton (13, 9,  "bSet_Schedule");   //Button to turn Dev1 ON (LED - channel 1)
 
 
 
@@ -415,6 +478,8 @@ NexTouch *nex_listen_list[] = {
   &bDev3_Off,
   &sDimmer,
   &bUpload,
+  &bSet_Schedule,
+  &bSet_Alerts,
 
   NULL
 };
@@ -545,6 +610,71 @@ void bUploadPopCallback(void *ptr) {
   
 }
 
+
+
+//Variables for the alert sensors
+   
+
+
+//function to gather all the data needed for alerts
+// this is called when we are at the alerts page when the user presses the set alerts button
+void getAlerts(){
+
+
+    tempMinW.getText(buffer, sizeof(buffer));
+    alerts_water_temp_min     = atoi(buffer);
+    
+    tempMaxW.getText(buffer, sizeof(buffer));
+    alerts_water_temp_max     = atoi(buffer);
+    
+    phMin.getText(buffer, sizeof(buffer));
+    alerts_water_ph_min       = atoi(buffer);
+    
+    phMax.getText(buffer, sizeof(buffer));
+    alerts_water_ph_max       = atoi(buffer);
+    
+    tempMinA.getText(buffer, sizeof(buffer));
+    alerts_ambient_temp_min   = atoi(buffer);
+    
+    tempMaxA.getText(buffer, sizeof(buffer));
+    alerts_ambient_temp_max   = atoi(buffer);
+}
+
+
+
+//function to gather all the data needed for schedules
+// this is called when we are at the schedule page when the user presses the set schedule button
+void getSchedule(){
+
+//Variables for the scheduling
+
+
+
+       water_start.getText(buffer, sizeof(buffer));
+       schedules_water_start  = buffer;
+       
+       water_end.getText(buffer, sizeof(buffer)) ;
+       schedules_water_end    = buffer ;
+       
+       air_start.getText(buffer, sizeof(buffer));
+       schedules_air_start    = buffer;
+       
+       air_end.getText(buffer, sizeof(buffer));
+       schedules_air_end      = buffer;
+       
+       light_start.getText(buffer, sizeof(buffer));
+       schedules_light_start  = buffer; 
+       
+       light_end.getText(buffer, sizeof(buffer));
+       schedules_light_end    = buffer;
+
+       simulateSun.getValue(&sun_state);
+
+Serial1.println(schedules_water_start);
+Serial1.println(sun_state);
+       
+
+}
 
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -719,52 +849,6 @@ void logData(){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //This funtion is used to update the sensor values being shown on the display
-/*
-  Variables that we will update in here:
-//*************PAGE_1**********************************************************************************************
-//Water Monitoring values
-tWater_Temp_page_1
-tWater_Lvl_page_1 
-tWater_Flow_page_1 
-tWater_pH_page_1   
-//Ambient Environment values
-tAir_Temp_page_1    
-tAir_Humidity_page_1 
-tAir_Light_1_page_1 
-
-//*************PAGE_2**********************************************************************************************
-//Water Monitoring values
-tWater_Temp_page_2 
-tWater_Lvl_page_2 
-tWater_Flow_page_2   
-tWater_pH_page_2     
-//Ambient Environment values
-tAir_Temp_page_2       
-tAir_Humidity_page_2  
-tAir_Light_2_page_2    
-
-//*************PAGE_3********************************************************************************************
-//Water Monitoring values
-tWater_Temp_page_3 
-tWater_Lvl_page_3  
-tWater_Flow_page_3  
-tWater_pH_page_3  
-//Ambient Environment values
-tAir_Temp_page_3     
-tAir_Humidity_page_3 
-tAir_Light_1_page_3 
-//*************PAGE_4**********************************************************************************************
-//Water Monitoring values
-tWater_Temp_page_4  
-tWater_Lvl_page_4   
-tWater_Flow_page_4 
-tWater_pH_page_4   
-
-//Ambient Environment values
-tAir_Temp_page_4      
-tAir_Humidity_page_4 
-tAir_Light_2_page_4  
-*/
 
 
 void bUpdateDisplay(){
@@ -779,25 +863,6 @@ void bUpdateDisplay(){
 //Serial1.println("We are in the UpdateDisplayData Function ");
 //
 
-
-//Converting value to a string 
-//THIS DID NOT WORK WHEN WE DID IT AT THIS LEVEL
-//       dtostrf(pH, 6,2, pHTemp);
-//         Serial1.print("pH is: ");
-//         Serial1.println(pH);
-//         Serial1.print("pH char value is: ");
-//         Serial1.println(pHTemp);
-//       dtostrf(temperature, 6, 2, temperatureWTemp);
-//         Serial1.print("temperature is: ");
-//         Serial1.println(temperature);
-//         Serial1.print("temperatureWTemp char value is: ");
-//         Serial1.println(temperatureWTemp);
-//       dtostrf(pressure, 6, 2, levelTemp);
-//       dtostrf(flow, 6, 2, flowTemp);
-//       dtostrf(TempF, 6, 2, temperatureFTemp);
-//       dtostrf(humidity, 6, 2, humidityTemp);
-//       dtostrf(lux1, 6, 2, lux1Temp);
-//       dtostrf(lux2, 6, 2, lux2Temp);
        
 //Updating the pH variable
       dtostrf(pH, 6,2, pHTemp);
@@ -805,10 +870,6 @@ void bUpdateDisplay(){
       tWater_pH_page_2.setText(pHTemp); 
       tWater_pH_page_3.setText(pHTemp); 
       tWater_pH_page_4.setText(pHTemp);    
-//         Serial1.print("pH is: ");
-//         Serial1.println(pH);
-//         Serial1.print("pH char value is: ");
-//         Serial1.println(pHTemp);
 
 //**************************************************************************************
 //Updating the LPS variables  
@@ -818,13 +879,7 @@ void bUpdateDisplay(){
       tWater_Temp_page_2.setText(temperatureWTemp);
       tWater_Temp_page_3.setText(temperatureWTemp);
       tWater_Temp_page_4.setText(temperatureWTemp);    
-
-//         Serial1.print("temperature is: ");
-//         Serial1.println(temperature);
-//         Serial1.print("temperatureWTemp char value is: ");
-//         Serial1.println(temperatureWTemp);
-//
-//        
+       
 //*************************************************
       dtostrf(pressure, 6, 2, levelTemp);
       tWater_Lvl_page_1.setText(levelTemp);
@@ -893,7 +948,13 @@ Serial1.println("Card failed, or not present");
     // don't do anything more:
     while (1);
   }
+
+//dayStamp = timeClient.getFormattedDate();
+epoch = timeClient.getEpochTime();  
+data_logging_file_name = "datalog_"+String(epoch)+".txt";
+
 Serial1.println("card initialized.");
+
 
 
 Serial1.println("trying to open datalog.txt");
@@ -934,6 +995,7 @@ timeClient.update();
 timeStamp = timeClient.getFormattedTime();
 
 
+
 Serial1.println("The time is : "+timeStamp);
 
 delay(1500);
@@ -972,12 +1034,14 @@ Register the pop event callback function of the components
 Serial1.println("");
 Serial1.println("Nextion Stuff Should be setup");
 
-
+///CUT THIS PORTION OUT TO CONNECT TO WIFI FROM A BUTTON
   WiFi.begin(ssid, password);
   while ( WiFi.status() != WL_CONNECTED ) {
       delay ( 500 );  // NOT for debugging
       Serial1.print ( "." );
   }
+
+//END HERE
     
 //  bUpdateDisplay();
   
