@@ -78,12 +78,12 @@ const int SD_CS = 0;   // chip select pin for the SD Card
 
 
 //Variables for the alert sensors
-int alerts_water_temp_min,
-    alerts_water_temp_max,
-    alerts_water_ph_min,
-    alerts_water_ph_max,
-    alerts_ambient_temp_min,
-    alerts_ambient_temp_max;
+String  alerts_water_temp_min,
+        alerts_water_temp_max,
+        alerts_water_ph_min,
+        alerts_water_ph_max,
+        alerts_ambient_temp_min,
+        alerts_ambient_temp_max;
 
 //Variables for the scheduling
 String schedules_water_start,
@@ -610,6 +610,25 @@ void bUploadPopCallback(void *ptr) {
   
 }
 
+void bSchedulePopCallback(void *ptr) {
+  
+
+  
+}
+
+void bAlertsPopCallback(void *ptr) {
+ 
+  
+}
+
+
+
+
+
+
+
+
+
 
 
 //Variables for the alert sensors
@@ -618,33 +637,58 @@ void bUploadPopCallback(void *ptr) {
 
 //function to gather all the data needed for alerts
 // this is called when we are at the alerts page when the user presses the set alerts button
-void getAlerts(){
+void get_alerts(){
 
 
     tempMinW.getText(buffer, sizeof(buffer));
-    alerts_water_temp_min     = atoi(buffer);
+    alerts_water_temp_min     = buffer;
     
     tempMaxW.getText(buffer, sizeof(buffer));
-    alerts_water_temp_max     = atoi(buffer);
+    alerts_water_temp_max     = buffer;
     
     phMin.getText(buffer, sizeof(buffer));
-    alerts_water_ph_min       = atoi(buffer);
+    alerts_water_ph_min       = buffer;
     
     phMax.getText(buffer, sizeof(buffer));
-    alerts_water_ph_max       = atoi(buffer);
+    alerts_water_ph_max       = buffer;
     
     tempMinA.getText(buffer, sizeof(buffer));
-    alerts_ambient_temp_min   = atoi(buffer);
+    alerts_ambient_temp_min   = buffer;
     
     tempMaxA.getText(buffer, sizeof(buffer));
-    alerts_ambient_temp_max   = atoi(buffer);
+    alerts_ambient_temp_max   = buffer;
+    
+  
 }
 
-
+void check_alerts(){
+//
+//
+//            if(String(pHTemp)==alerts_water_ph_min){
+//           
+//            }
+//            else if(String(pHTemp)==alerts_water_ph_max){
+//                 
+//            }
+//            else if(String(temperatureWTemp)==alerts_water_temp_min){
+//                  
+//            }
+//            else if(String(temperatureWTemp)==alerts_water_temp_max){
+//                  
+//            }
+//            else if(String(temperatureFTemp)==alerts_ambient_temp_min){
+//                 
+//            }
+//            else if(String(temperatureFTemp)==alerts_water_ph_max){
+//               
+//            }
+            
+        
+}
 
 //function to gather all the data needed for schedules
 // this is called when we are at the schedule page when the user presses the set schedule button
-void getSchedule(){
+void get_schedule(){
 
 //Variables for the scheduling
 
@@ -674,6 +718,31 @@ Serial1.println(schedules_water_start);
 Serial1.println(sun_state);
        
 
+}
+
+void check_schedule(){
+    
+      if(the_time==schedules_water_start){
+            relay.turn_on_channel(1);
+      }
+      else if(the_time==schedules_water_end){
+            relay.turn_off_channel(1);
+      }
+      else if(the_time==schedules_air_start){
+            relay.turn_on_channel(2);
+      }
+      else if(the_time==schedules_air_end){
+            relay.turn_off_channel(2);
+      }
+      else if(the_time==schedules_light_start){
+            relay.turn_on_channel(3);
+      }
+      else if(the_time==schedules_light_end){
+            relay.turn_off_channel(3);
+      }
+      
+     
+  
 }
 
 
@@ -1028,6 +1097,13 @@ Register the pop event callback function of the components
 
 //DATA UPLOAD
   bUpload.attachPop(bUploadPopCallback, &bUpload);
+
+//Set Schedules button
+bSet_Schedule.attachPop(bSchedulePopCallback, &bSet_Schedule);
+
+//Set Alerts button
+bSet_Alerts.attachPop(bAlertsPopCallback, &bSet_Alerts);
+  
 
 
 
