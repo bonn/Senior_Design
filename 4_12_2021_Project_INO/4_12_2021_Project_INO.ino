@@ -16,9 +16,6 @@
 */
 
 
-
-
-
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                        Libraries to Import                                    // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,11 +67,6 @@
 
 //defining SD card pin
 const int SD_CS = 0;   // chip select pin for the SD Card
-
-
-
-
-
 
 
 //Variables for the alert sensors
@@ -206,9 +198,6 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 
 
 
-
-
-
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                               Creating and Setting up Devices                                 // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -319,9 +308,6 @@ dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
 //Starting FLOW SENSOR
 pinMode(water_flow_pin, INPUT);           //Sets the pin as an input
 attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrupt 0 (pin 2 on the Arduino Uno) to run the function "Flow"
-
-
-
 
 
 //Starting the DAC
@@ -611,25 +597,12 @@ void bUploadPopCallback(void *ptr) {
 }
 
 void bSchedulePopCallback(void *ptr) {
-  
-
-  
+ Serial1.print ( "set Schedule button working" ); 
 }
 
 void bAlertsPopCallback(void *ptr) {
- 
-  
+ Serial1.print ( "set alerts button working" );
 }
-
-
-
-
-
-
-
-
-
-
 
 //Variables for the alert sensors
    
@@ -662,26 +635,26 @@ void get_alerts(){
 }
 
 void check_alerts(){
-//
-//
-//            if(String(pHTemp)==alerts_water_ph_min){
-//           
-//            }
-//            else if(String(pHTemp)==alerts_water_ph_max){
-//                 
-//            }
-//            else if(String(temperatureWTemp)==alerts_water_temp_min){
-//                  
-//            }
-//            else if(String(temperatureWTemp)==alerts_water_temp_max){
-//                  
-//            }
-//            else if(String(temperatureFTemp)==alerts_ambient_temp_min){
-//                 
-//            }
-//            else if(String(temperatureFTemp)==alerts_water_ph_max){
-//               
-//            }
+
+
+            if(String(pHTemp)==alerts_water_ph_min){
+           
+            }
+            else if(String(pHTemp)==alerts_water_ph_max){
+                 
+            }
+            else if(String(temperatureWTemp)==alerts_water_temp_min){
+                  
+            }
+            else if(String(temperatureWTemp)==alerts_water_temp_max){
+                  
+            }
+            else if(String(temperatureFTemp)==alerts_ambient_temp_min){
+                 
+            }
+            else if(String(temperatureFTemp)==alerts_water_ph_max){
+               
+            }
             
         
 }
