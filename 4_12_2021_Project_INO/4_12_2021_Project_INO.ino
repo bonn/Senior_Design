@@ -604,8 +604,6 @@ void bAlertsPopCallback(void *ptr) {
  Serial1.print ( "set alerts button working" );
 }
 
-//Variables for the alert sensors
-   
 
 
 //function to gather all the data needed for alerts
@@ -1115,14 +1113,14 @@ void loop(void) {
 
  
 // This updates the sensor text on the display
-//  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds() ==4 && trigger){
+  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds() % 2 ==0){
 Serial1.println("now we update data");
          bUpdateSensorValues();
 Serial1.println("data should be updated, now we will update the display");
          bUpdateDisplay();
          trigger = false;
 Serial1.println("display should be updated");     
-//  }
+  }
 
 
   //This resets the trigger to true so that we get the next update in 5 mins 
@@ -1133,8 +1131,8 @@ Serial1.println("Reset Trigger to TRUE");
 
   //This checks the time and then if the trigger is true it will update the sensor data and set the trigger to false
   // This ensures that we only call the function once in the desired time frame
-  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds() ==4 && trigger){
-Serial1.println("now we update sensor data");
+  if(timeClient.getMinutes() % 5 == 0 &&timeClient.getSeconds() ==4 && trigger){
+Serial1.println("now we update sensor data before LOGGING\n");
          bUpdateSensorValues();
 Serial1.println("data should be updated, now we will update the display");
          bUpdateDisplay();
