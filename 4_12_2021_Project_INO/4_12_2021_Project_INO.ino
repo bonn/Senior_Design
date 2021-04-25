@@ -105,7 +105,7 @@ String     the_time;
 String formatted_Date="";
 String dayStamp="";
 String timeStamp="";   
-long epoch;                                            
+unsigned long epoch;                                            
 
 
 
@@ -165,9 +165,9 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 
 //variable used for logging data
 bool logging_trigger;
-long  old_time = 0;
-long  new_time;
-long  time_diff;
+unsigned long  old_time = 0;
+unsigned long  new_time;
+unsigned long  time_diff;
 
 
 
@@ -737,7 +737,7 @@ void check_schedule(){
 // This function will update the global variables that are used to hold the sensor values
 void bUpdateSensorValues(){
 //
-//Serial1.println("We are in the UpdateSensorValues Function ");
+Serial1.println("We are in the UpdateSensorValues Function ");
 //    
      
      //This reads the analog input and converts it to pH
@@ -1020,11 +1020,12 @@ void setup(void) {
 Serial1.begin(9600);
 
   timeClient.begin();
-  create_devices();
+  
   timeClient.update();
   timeStamp = timeClient.getFormattedTime();
   
 Serial1.println("The time is : "+timeStamp);
+create_devices();
   setup_SD();
   
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to set the baudrate
@@ -1076,7 +1077,7 @@ Serial1.println("\nNextion Stuff Should be setup\n");
  //                                        LOOP                                                  //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void loop(void) {
-
+//Serial1.print("In Loop");   
   //updating the time client to get the current time
   timeClient.update();
   timeStamp = timeClient.getFormattedTime();
@@ -1086,16 +1087,15 @@ void loop(void) {
 
   //This checks the old_time which has the last second value and compares it to the current seconds
   // This ensures that we only call the function once in the desired time frame
-  new_time  =  timeClient.getEpochTime();
-  time_diff = new_time-old_time;    
-  if(!time_diff>=500){
-Serial1.print("The time difference is: ");    
-Serial1.println(time_diff);   
-         old_time = new_time;
+  new_time  =  timeClient.getEpochTime(); 
+  time_diff = new_time-old_time;  
+  if(time_diff>=1){
+    Serial1.println("time diff > 1");
+         check_schedule();
+         check_alerts();
          bUpdateSensorValues();
          bUpdateDisplay();
   }
-
 
 //DATA LOGGING CHECKS
   //This resets the logging_trigger to true so that we get the next update in 5 mins 
@@ -1113,5 +1113,5 @@ Serial1.println("Reset logging_trigger to FALSE");
       
   }
 
-  
+  old_time = new_time;
 }
