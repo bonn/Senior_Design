@@ -164,7 +164,13 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 
 
 //variable used for logging data
-bool trigger;
+bool logging_trigger;
+long  old_time = 0;
+long  new_time;
+long  time_diff;
+
+
+
 
 //variables used to store SSID info *NEEDS TO BE CHANGED TO UPDATE IN APP
 const char *ssid = "The Promised LAN";
@@ -276,9 +282,9 @@ void create_devices()
 
 //Starting the Relay
 relay.begin(0x11);
-  device_1 = false;
-  device_2 = false;
-  device_3 = false;
+//  device_1 = false;
+//  device_2 = false;
+//  device_3 = false;
 
 
 //Starting DHT Device
@@ -301,8 +307,10 @@ dht.setup(DHTPIN, DHTesp::DHT22); // Connect DHT sensor to Pin defined earlier
  if (!lps35hw.begin_I2C()) {
     Serial1.println("Couldn't find LPS35HW chip");
     while (1);
+  }else{
+    Serial1.println("Found LPS35HW chip");
   }
-  Serial1.println("Found LPS35HW chip");
+    
   
 
 //Starting FLOW SENSOR
@@ -324,9 +332,6 @@ attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrup
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                NEXTION SETUP -  TOUCH SCREEN OBJECTS (TEXT BOXES AND BUTTONS)                 // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 //Nextion objects - Example (page id = 0, component id = 1, component name = "b0")
 
 
@@ -487,7 +492,7 @@ void bDev1_OnPopCallback(void *ptr) {
  */  
   tState1.setText("State: on");
   device_1 = true;
-  delay(500);//debugging
+ // delay(500);//debugging
  Serial1.println("Turn on Relay Channel 1");
   relay.turn_on_channel(1);
   
@@ -568,12 +573,7 @@ void sDimmerPopCallback(void *ptr){
 dimmer_float_2_int = round(dimmer_float);
 
 Serial1.println("We are in the Dimmer callbak function.");
-Serial1.print(" The current dimmer setting is at: ");
-Serial1.print(dimmer_value);
-Serial1.print("% or ");
-Serial1.print(dimmer_float_2_int);
-Serial1.println(" of 255.");
-    
+
   //This function sets the DAC output to the correct level( 8 bit unsinged int; 0-255 levels )
   //The slider goes from 0-100% so we make the number and turn it into a percentage to muliply by 255
   dac.setOutput(dimmer_float_2_int);
@@ -587,7 +587,7 @@ Serial1.println(" of 255.");
 void bUploadPopCallback(void *ptr) {
   Serial1.println("Inside the upload function");
   bUpdateSensorValues();
-  delay(1000);
+ // delay(1000);
   bUpdateDisplay();
   logData();  
   
@@ -605,6 +605,13 @@ void bAlertsPopCallback(void *ptr) {
 }
 
 
+
+
+
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////
+ //                                           ALERTS                                              // 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //function to gather all the data needed for alerts
 // this is called when we are at the alerts page when the user presses the set alerts button
@@ -656,6 +663,12 @@ void check_alerts(){
             
         
 }
+
+
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////
+ //                                          SCHEDULING                                           // 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //function to gather all the data needed for schedules
 // this is called when we are at the schedule page when the user presses the set schedule button
@@ -811,13 +824,9 @@ Serial1.println(lux2);
 
 }
 
-
-
-
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                        LOG SENSOR DATA                                        // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 //We need to update the data string that will be uploaded when we pull the new data
 //The format of the data string is shown below
 /*
@@ -881,16 +890,12 @@ void logData(){
      else {
       Serial1.println("error opening datalog.txt");
     }
-  
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                    UPDATE DISPLAY DATA                                        // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 //This funtion is used to update the sensor values being shown on the display
-
-
 void bUpdateDisplay(){
 //  This is how you can communicate to the display without the nextion software
 //  Serial.print(F("t0.txt=""));
@@ -959,20 +964,7 @@ void bUpdateDisplay(){
       tAir_Light_2_page_2.setText(lux2Temp);  
       tAir_Light_2_page_4.setText(lux2Temp);
 //**************************************************************************************
-//
-////Water Monitoring values
-//tWater_Temp_page_2 
-//tWater_Lvl_page_2 
-//tWater_Flow_page_2   
-//tWater_pH_page_2     
-////Ambient Environment values
-//tAir_Temp_page_2       
-//tAir_Humidity_page_2  
-//tAir_Light_2_page_2    
-//      
-
 }
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
  //                                        SD SETUP                                              //
@@ -995,10 +987,7 @@ data_logging_file_name = "datalog_"+String(epoch)+".txt";
 
 Serial1.println("card initialized.");
 
-
-
-Serial1.println("trying to open datalog.txt");
-  
+ 
   if(SD.exists("datalog.txt")){
 
       SD.remove("datalog.txt");
@@ -1009,13 +998,13 @@ Serial1.println("trying to open datalog.txt");
 
 
   
-Serial1.println("trying to write to datalog.txt");  
+
   // if the file is available, we will write the first line to the CSV which is the header info:
   if (dataFile) {
     dataFile.println(headerString);
     dataFile.close();
     // print to the serial port too:
-Serial1.println(headerString);
+
   }
   // if the file isn't open, pop up an error:
   else {
@@ -1030,23 +1019,17 @@ void setup(void) {
  
 Serial1.begin(9600);
 
-timeClient.begin();
-timeClient.update();
-timeStamp = timeClient.getFormattedTime();
-
-
-
-Serial1.println("The time is : "+timeStamp);
-
-delay(1500);
+  timeClient.begin();
   create_devices();
+  timeClient.update();
+  timeStamp = timeClient.getFormattedTime();
+  
+Serial1.println("The time is : "+timeStamp);
   setup_SD();
-//Serial1.println("Setting up Nextion Stuff");
-  bUpdateSensorValues();
-
+  
 //NexConfig.h file in ITEADLIB_Arduino_Nextion folder to set the baudrate
   nexInit();
-
+  
 /*
 In here we attach the PopCallback functions to the buttons themselves
 Register the pop event callback function of the components
@@ -1070,16 +1053,13 @@ Register the pop event callback function of the components
   bUpload.attachPop(bUploadPopCallback, &bUpload);
 
 //Set Schedules button
-bSet_Schedule.attachPop(bSchedulePopCallback, &bSet_Schedule);
+  bSet_Schedule.attachPop(bSchedulePopCallback, &bSet_Schedule);
 
 //Set Alerts button
-bSet_Alerts.attachPop(bAlertsPopCallback, &bSet_Alerts);
-  
+  bSet_Alerts.attachPop(bAlertsPopCallback, &bSet_Alerts);
 
 
-
-Serial1.println("");
-Serial1.println("Nextion Stuff Should be setup");
+Serial1.println("\nNextion Stuff Should be setup\n");
 
 ///CUT THIS PORTION OUT TO CONNECT TO WIFI FROM A BUTTON
   WiFi.begin(ssid, password);
@@ -1089,58 +1069,47 @@ Serial1.println("Nextion Stuff Should be setup");
   }
 
 //END HERE
-    
-//  bUpdateDisplay();
-  
+ 
 }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
  //                                        LOOP                                                  //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void loop(void) {
-  /*
-   * When a pop or push event occured every time,
-   * the corresponding component[right page id and component id] in touch event list will be asked.
-   */
 
   //updating the time client to get the current time
   timeClient.update();
   timeStamp = timeClient.getFormattedTime();
+
   //This is the function used to monitor the Nextion display for touch input
   nexLoop(nex_listen_list);
-  
 
-
- 
-// This updates the sensor text on the display
-  if(timeClient.getMinutes() % 1 == 0 &&timeClient.getSeconds() % 2 ==0){
-Serial1.println("now we update data");
-         bUpdateSensorValues();
-Serial1.println("data should be updated, now we will update the display");
-         bUpdateDisplay();
-         trigger = false;
-Serial1.println("display should be updated");     
-  }
-
-
-  //This resets the trigger to true so that we get the next update in 5 mins 
-  if(timeClient.getMinutes() % 1 == 0 && timeClient.getSeconds() ==5 && trigger==false){
-      trigger = true;
-Serial1.println("Reset Trigger to TRUE");
-  }
-
-  //This checks the time and then if the trigger is true it will update the sensor data and set the trigger to false
+  //This checks the old_time which has the last second value and compares it to the current seconds
   // This ensures that we only call the function once in the desired time frame
-  if(timeClient.getMinutes() % 5 == 0 &&timeClient.getSeconds() ==4 && trigger){
-Serial1.println("now we update sensor data before LOGGING\n");
+  new_time  =  timeClient.getEpochTime();
+  time_diff = new_time-old_time;    
+  if(!time_diff>=500){
+Serial1.print("The time difference is: ");    
+Serial1.println(time_diff);   
+         old_time = new_time;
          bUpdateSensorValues();
-Serial1.println("data should be updated, now we will update the display");
          bUpdateDisplay();
-Serial1.println("display should be updated, now we will log the data");         
+  }
+
+
+//DATA LOGGING CHECKS
+  //This resets the logging_trigger to true so that we get the next update in 5 mins 
+  if(timeClient.getMinutes() % 5 == 0 && timeClient.getSeconds() ==5 && logging_trigger==false){
+      logging_trigger = true;
+Serial1.println("Reset logging_trigger to TRUE");
+  }
+
+  //This checks the time and then if the logging_trigger is true it will update the sensor data and set the logging_trigger to false
+  // This ensures that we only call the function once in the desired time frame
+  if(timeClient.getMinutes() % 5 == 0 &&timeClient.getSeconds() ==4 && logging_trigger){
          logData();  
-Serial1.println("data should be logged");
-         trigger = false;
-Serial1.println("Reset Trigger to FALSE");
+         logging_trigger = false;
+Serial1.println("Reset logging_trigger to FALSE");
       
   }
 
