@@ -1117,7 +1117,7 @@ Serial1.println("We are in the UpdateSensorValues Function ");
       
              //nexLoop(nex_listen_list);
       //Getting LPS53 Pressure data
-      pressure = (lps35hw.readPressure()-atmo_pressure);
+      pressure = (lps35hw.readPressure()-atmo_pressure)*1.019368;
 
              //nexLoop(nex_listen_list);
       //Getting Water Flow
