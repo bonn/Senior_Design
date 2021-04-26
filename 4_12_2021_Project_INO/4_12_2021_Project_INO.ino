@@ -69,6 +69,10 @@
 const int SD_CS = 0;   // chip select pin for the SD Card
 
 
+
+uint8_t pagenumber;
+
+
 //Variables for the alert sensors
 String  alerts_water_temp_min,
         alerts_water_temp_max,
@@ -76,6 +80,14 @@ String  alerts_water_temp_min,
         alerts_water_ph_max,
         alerts_ambient_temp_min,
         alerts_ambient_temp_max;
+
+bool        alerts_water_temp_min_trigger = false;
+bool        alerts_water_temp_max_trigger = false;
+bool        alerts_water_ph_min_trigger = false;
+bool        alerts_water_ph_max_trigger = false;
+bool        alerts_ambient_temp_min_trigger = false;
+bool        alerts_ambient_temp_max_trigger = false;
+        
 
 //Variables for the scheduling
 String schedules_water_start,
@@ -91,6 +103,7 @@ char buffer[100] = {0};
 bool simulate_Sunlight;
 uint32_t sun_state;
 
+bool update_values = true;
 
 //Pin that is used for the water flow sensor
 const byte water_flow_pin = 10;            // GPIO pin for the water flow sensor
@@ -107,7 +120,7 @@ String dayStamp="";
 String timeStamp="";   
 unsigned long epoch;                                            
 
-
+uint32_t current_page=0;
 
 float test = 1; //testing dTOstrF
                                                   
@@ -122,6 +135,10 @@ float flow;
 //variable for the pH sensor
 float pH;
 
+
+String ST_pHTemp          ;
+String ST_temperatureWTemp;
+String ST_temperatureFTemp;
 
 //variable for the dimmer value
 uint32_t dimmer_value = 0;
@@ -165,6 +182,7 @@ volatile int count; //This integer needs to be set as volatile to ensure it upda
 
 //variable used for logging data
 bool logging_trigger;
+bool DHT_trigger;
 unsigned long  old_time = 0;
 unsigned long  new_time;
 unsigned long  time_diff;
@@ -252,12 +270,12 @@ Adafruit_LPS35HW lps35hw = Adafruit_LPS35HW();
 uint8_t get_flow() {
   count = 0;      // Reset the counter so we start counting from 0 again
   interrupts();   //Enables interrupts on the Arduino
-  delay (1000);   //Wait 1 second
+  delay (250);   //Wait 1/4 second
   noInterrupts(); //Disable the interrupts on the Arduino
 
   //Start the math
   flowRate = (count * 2.25);        //Take counted pulses in the last second and multiply by 2.25mL
-  flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
+  flowRate = flowRate * 4 * 60;         //Convert seconds to minutes, giving you mL / Minute
   flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
 
   return (flowRate);
@@ -346,6 +364,36 @@ attachInterrupt(water_flow_pin , flow_interrupt, RISING);  //Configures interrup
 */
 
 
+//***********************************************************************************************************
+
+NexPage page0   = NexPage(0, 0, "LoadingPage");  // Page added as a touch event
+NexPage page1   = NexPage(1, 0, "z1");  // Page added as a touch event
+NexPage page2   = NexPage(2, 0, "z1info");  // Page added as a touch event
+NexPage page3   = NexPage(3, 0, "z2");  // Page added as a touch event
+NexPage page4   = NexPage(4, 0, "z2info");  // Page added as a touch event
+NexPage page5   = NexPage(5, 0, "z3");  // Page added as a touch event
+NexPage page6   = NexPage(6, 0, "z3info");  // Page added as a touch event
+NexPage page7   = NexPage(7, 0, "z4");  // Page added as a touch event
+NexPage page8   = NexPage(8, 0, "z4info");  // Page added as a touch event
+NexPage page9   = NexPage(9, 0, "SystemSettings");  // Page added as a touch event
+NexPage page10  = NexPage(10, 0, "keybdA");  // Page added as a touch event
+NexPage page11  = NexPage(11, 0, "Alerts");  // Page added as a touch event
+NexPage page12  = NexPage(12, 0, "keybdB");  // Page added as a touch event
+NexPage page13  = NexPage(13, 0, "Schedules");  // Page added as a touch event
+NexPage page14  = NexPage(14, 0, "keybdC");  // Page added as a touch event
+
+
+
+NexTimer tm0    = NexTimer(1,34,"tm0");
+
+//
+//NexButton Settings1  = NexButton (1, 9,  "Settings1");   //Button to turn Dev1 ON (LED - channel 1)
+//NexButton Settings2  = NexButton (3, 9,  "Settings2");   //Button to turn Dev1 ON (LED - channel 1)
+//NexButton Settings3  = NexButton (5, 9,  "Settings3");   //Button to turn Dev1 ON (LED - channel 1)
+//NexButton Settings4  = NexButton (7, 9,  "Settings4");   //Button to turn Dev1 ON (LED - channel 1)
+//
+//NexButton Back      = NexButton (9, 2,  "Back");   //Button to turn Dev1 ON (LED - channel 1)
+
 //*************PAGE_1**********************************************************************************************
 //Water Monitoring values
 NexText tWater_Temp_page_1      = NexText (1, 11, "tWater_Temp");  //Text with water temperature value.
@@ -357,7 +405,7 @@ NexText tWater_pH_page_1        = NexText (1, 14, "tWater_pH");         //Text w
 NexText tAir_Temp_page_1        = NexText (1, 15, "tAir_Temp");       //Text with air temperature value.
 NexText tAir_Humidity_page_1    = NexText (1, 16, "tAir_Humidity");   //Text with humidity value.
 NexText tAir_Light_1_page_1     = NexText (1, 17, "tAir_Light_1");    //Text with light level 1 value.
-//NexText tAir_Light_2_page_1   = NexText (1, 40, "light2_var");    //Text with light level 2 value.
+
 
 
 //*************PAGE_2**********************************************************************************************
@@ -371,7 +419,7 @@ NexText tWater_pH_page_2         = NexText (2, 14, "tWater_pH");         //Text 
 NexText tAir_Temp_page_2         = NexText (2, 15, "tAir_Temp");       //Text with air temperature value.
 NexText tAir_Humidity_page_2     = NexText (2, 16, "tAir_Humidity");   //Text with humidity value.
 NexText tAir_Light_2_page_2      = NexText (2, 17, "tAir_Light_2");    //Text with light level 2 value.
-//NexText tAir_Light_1_page_2    = NexText (2, 40, "light1_var");    //Text with light level 1 value.
+
 
 //*************PAGE_3********************************************************************************************
 //Water Monitoring values
@@ -384,7 +432,7 @@ NexText tWater_pH_page_3    = NexText (3, 14, "tWater_pH");         //Text with 
 NexText tAir_Temp_page_3        = NexText (3, 15, "tAir_Temp");       //Text with air temperature value.
 NexText tAir_Humidity_page_3    = NexText (3, 16, "tAir_Humidity");   //Text with humidity value.
 NexText tAir_Light_1_page_3     = NexText (3, 17, "tAir_Light_1");    //Text with light level 1 value.
-//NexText tAir_Light_2_page_3   = NexText (3, 40, "light2_var");    //Text with light level 2 value.
+
 
 //*************PAGE_4**********************************************************************************************
 //Water Monitoring values
@@ -397,7 +445,7 @@ NexText tWater_pH_page_4      = NexText (4, 14, "tWater_pH");         //Text wit
 NexText tAir_Temp_page_4        = NexText (4, 15, "tAir_Temp");       //Text with air temperature value.
 NexText tAir_Humidity_page_4    = NexText (4, 16, "tAir_Humidity");   //Text with humidity value.
 NexText tAir_Light_2_page_4     = NexText (4, 17, "tAir_Light_2");    //Text with light level 2 value.
-//NexText tAir_Light_1_page_4   = NexText (4, 40, "light1_var");    //Text with light level 1 value.
+
 
 
 ///***********************************************************************************************************************
@@ -471,7 +519,27 @@ NexTouch *nex_listen_list[] = {
   &bUpload,
   &bSet_Schedule,
   &bSet_Alerts,
-
+  &page0, 
+  &page1, 
+  &page2, 
+  &page3, 
+  &page4, 
+  &page5, 
+  &page6, 
+  &page7, 
+  &page8, 
+  &page9, 
+  &page10,
+  &page11,
+  &page12,
+  &page13,
+  &page14,
+//  &Settings1,
+//  &Settings2,
+//  &Settings3,
+//  &Settings4,
+//  &Back,
+  
   NULL
 };
 
@@ -480,6 +548,115 @@ NexTouch *nex_listen_list[] = {
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //             BUTTON CALLBACKS (PUT CODE IN HERE TO RUN WHEN THE IS PUSHED)                     // 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//
+//// Page change event:
+//void Settings1PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = false;
+//   
+//}
+//// End of press event
+//
+//// Page change event:
+//void Settings2PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = false;
+//   
+//}
+//// End of press event
+//
+//// Page change event:
+//void Settings3PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = false;
+//   
+//}
+//// End of press event
+//
+//// Page change event:
+//void Settings4PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = false;
+//   
+//}
+//// End of press event
+//
+//// Page change event:
+//void BackPopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = true;
+//   
+//}
+//// End of press event
+//
+//
+//
+//// Page change event:
+//void BackPopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+//{
+//   update_values = true;
+//   
+//}
+//// End of press event
+//
+//
+
+//Page change event:
+void page1PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+{
+   Serial1.println("in page one");
+   pagenumber = 1;
+   tm0.disable();
+}
+// End of press event
+
+
+
+//Page change event:
+void page3PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+{
+   Serial1.println("in page 3");
+   pagenumber = 3;
+   
+}
+// End of press event
+
+
+
+//Page change event:
+void page5PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+{
+   pagenumber = 5;
+   Serial1.println("in page 5");
+   
+}
+// End of press event
+
+
+
+//Page change event:
+void page7PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+{
+   pagenumber = 7;
+   Serial1.println("in page 7");
+}
+// End of press event
+
+
+//Page change event:
+void page9PopCallback(void *ptr)  // If page 2 is loaded on the display, the following is going to execute:
+{
+   pagenumber = 9;
+   Serial1.println("in page 9");
+   
+}
+// End of press event
+
+
+
 /*
  * Button bDev1_On component pop callback function.
  * This button turns on channel 1 of the relay
@@ -598,10 +775,15 @@ void bUploadPopCallback(void *ptr) {
 
 void bSchedulePopCallback(void *ptr) {
  Serial1.print ( "set Schedule button working" ); 
+ get_schedule();
+
+ 
 }
 
 void bAlertsPopCallback(void *ptr) {
  Serial1.print ( "set alerts button working" );
+ get_alerts();
+ 
 }
 
 
@@ -617,51 +799,189 @@ void bAlertsPopCallback(void *ptr) {
 // this is called when we are at the alerts page when the user presses the set alerts button
 void get_alerts(){
 
+Serial1.println("Getting ALerts");
 
+
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);
     tempMinW.getText(buffer, sizeof(buffer));
     alerts_water_temp_min     = buffer;
-    
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);   
     tempMaxW.getText(buffer, sizeof(buffer));
     alerts_water_temp_max     = buffer;
-    
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);   
     phMin.getText(buffer, sizeof(buffer));
     alerts_water_ph_min       = buffer;
-    
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);    
     phMax.getText(buffer, sizeof(buffer));
     alerts_water_ph_max       = buffer;
-    
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);   
     tempMinA.getText(buffer, sizeof(buffer));
     alerts_ambient_temp_min   = buffer;
-    
+ memset(buffer, 0, sizeof(buffer));
+             //nexLoop(nex_listen_list);    
     tempMaxA.getText(buffer, sizeof(buffer));
     alerts_ambient_temp_max   = buffer;
-    
+             //nexLoop(nex_listen_list);    
+
+
+
+
+Serial1.print("The alerts_water_temp_min is: ");
+Serial1.println(alerts_water_temp_min);
+Serial1.print("The alerts_water_temp_max is: ");
+Serial1.println(alerts_water_temp_max);
+delay(5000);  
+Serial1.print("The alerts_water_ph_min is: ");
+Serial1.println(alerts_water_ph_min);
+Serial1.print("The alerts_water_ph_max is: ");
+Serial1.println(alerts_water_ph_max);
+delay(5000);  
+Serial1.print("The alerts_ambient_temp_min is: ");
+Serial1.println(alerts_ambient_temp_min);
+Serial1.print("The alerts_ambient_temp_max is: ");
+Serial1.println(alerts_ambient_temp_max);
+
+Serial1.println();
+Serial1.println();
+delay(5000);      
+
+
+
+
+
+
+
+
+
+
+             
   
 }
 
 void check_alerts(){
 
 
-            if(String(pHTemp)==alerts_water_ph_min){
-           
+//59750 RED
+//64463  color redish
+//62891 orangeish
+//18047 blueish
+//65535 white
+
+//
+//        alerts_water_temp_min_trigger,
+//        alerts_water_temp_max_trigger,
+//        alerts_water_ph_min_trigger,
+//        alerts_water_ph_max_trigger,
+//        alerts_ambient_temp_min_trigger,
+//        alerts_ambient_temp_max_trigger;
+//        
+//
+// ST_pHTemp            = String(pHTemp);
+// ST_temperatureWTemp  = String(temperatureWTemp);
+// ST_temperatureFTemp  = String(temperatureFTemp);
+
+Serial1.println("Checking Alerts");
+            //Water pH
+            if(pH<=alerts_water_ph_min.toFloat()){
+                alerts_water_ph_min_trigger = true;
+                alerts_water_ph_max_trigger = false;
+                //nexLoop(nex_listen_list);
             }
-            else if(String(pHTemp)==alerts_water_ph_max){
-                 
+            else if(pH>=alerts_water_ph_max.toFloat()){
+                alerts_water_ph_min_trigger = false;
+                alerts_water_ph_max_trigger = true;
+                //nexLoop(nex_listen_list);
             }
-            else if(String(temperatureWTemp)==alerts_water_temp_min){
-                  
+            else{ 
+                alerts_water_ph_min_trigger = false;
+                alerts_water_ph_max_trigger = false;
             }
-            else if(String(temperatureWTemp)==alerts_water_temp_max){
-                  
+
+
+            //Water Temp
+            if(temperature<=alerts_water_temp_min.toFloat()){
+                alerts_water_temp_min_trigger = true;
+                alerts_water_temp_max_trigger = false;
             }
-            else if(String(temperatureFTemp)==alerts_ambient_temp_min){
-                 
+            else if(temperature>=alerts_water_temp_max.toFloat()){
+                alerts_water_temp_min_trigger = false;
+                alerts_water_temp_max_trigger = true;
             }
-            else if(String(temperatureFTemp)==alerts_water_ph_max){
-               
+            else{
+                alerts_water_temp_min_trigger = false;
+                alerts_water_temp_max_trigger = false;
             }
-            
-        
+
+            //Air Temp
+            if(TempF<=alerts_ambient_temp_min.toFloat()){
+                alerts_ambient_temp_min_trigger = true;
+                alerts_ambient_temp_max_trigger = false;
+            }
+            else if(TempF>=alerts_ambient_temp_max.toFloat()){
+                alerts_ambient_temp_min_trigger = false;
+                alerts_ambient_temp_max_trigger = true;
+            }
+            else{
+                alerts_ambient_temp_min_trigger = false;
+                alerts_ambient_temp_max_trigger = false;
+            }
+
+Serial1.print("The WTemp Min: ");
+Serial1.println(alerts_water_ph_min.toFloat());
+
+Serial1.print("The WTemp Max: ");
+Serial1.println(alerts_water_ph_max.toFloat());
+
+Serial1.print("The current WTemp: ");
+Serial1.println(String(temperatureWTemp).toFloat());
+
+Serial1.print("The alerts_water_temp_min_trigger is: ");
+Serial1.println(alerts_water_temp_min_trigger);
+
+Serial1.print("The alerts_water_temp_max_trigger is: ");
+Serial1.println(alerts_water_temp_max_trigger);
+
+Serial1.println();
+
+Serial1.print("The pH Min: ");
+Serial1.println(alerts_water_ph_min.toFloat());
+
+Serial1.print("The pH Max: ");
+Serial1.println(alerts_water_ph_max.toFloat());
+
+Serial1.print("The current pH: ");
+Serial1.println(String(pHTemp).toFloat());
+
+Serial1.print("The pH_trigger_min is: ");
+Serial1.println(alerts_water_ph_min_trigger);
+
+Serial1.print("The pH_trigger_max is: ");
+Serial1.println(alerts_water_ph_max_trigger);
+
+Serial1.println();
+
+Serial1.print("The temperatureFTemp Min: ");
+Serial1.println(alerts_water_ph_min.toFloat());
+
+Serial1.print("The temperatureFTemp Max: ");
+Serial1.println(alerts_water_ph_max.toFloat());
+
+Serial1.print("The current temperatureFTemp: ");
+Serial1.println(String(temperatureFTemp).toFloat());
+
+Serial1.print("The alerts_ambient_temp_min_trigger is: ");
+Serial1.println(alerts_ambient_temp_min_trigger);
+
+Serial1.print("The alerts_ambient_temp_max_trigger is: ");
+Serial1.println(alerts_ambient_temp_max_trigger);
+
+
+delay(1000);
 }
 
 
@@ -677,52 +997,93 @@ void get_schedule(){
 //Variables for the scheduling
 
 
-
+         //nexLoop(nex_listen_list);
        water_start.getText(buffer, sizeof(buffer));
        schedules_water_start  = buffer;
        
+        //nexLoop(nex_listen_list);
        water_end.getText(buffer, sizeof(buffer)) ;
        schedules_water_end    = buffer ;
+
        
+        //nexLoop(nex_listen_list);
        air_start.getText(buffer, sizeof(buffer));
        schedules_air_start    = buffer;
        
+        //nexLoop(nex_listen_list);
        air_end.getText(buffer, sizeof(buffer));
        schedules_air_end      = buffer;
+
        
+        //nexLoop(nex_listen_list);
        light_start.getText(buffer, sizeof(buffer));
        schedules_light_start  = buffer; 
        
+        //nexLoop(nex_listen_list);
        light_end.getText(buffer, sizeof(buffer));
        schedules_light_end    = buffer;
 
+       
+         //nexLoop(nex_listen_list);
        simulateSun.getValue(&sun_state);
+        //nexLoop(nex_listen_list);
+  
 
+Serial1.print("The schedules_water_start is: ");
 Serial1.println(schedules_water_start);
+Serial1.print("The schedules_water_end is: ");
+Serial1.println(schedules_water_end);
+
+Serial1.print("The schedules_air_start is: ");
+Serial1.println(schedules_air_start);
+Serial1.print("The schedules_air_end is: ");
+Serial1.println(schedules_air_end);
+
+Serial1.print("The schedules_light_start is: ");
+Serial1.println(schedules_light_start);
+Serial1.print("The schedules_light_end is: ");
+Serial1.println(schedules_light_end);
+
+
+
+
+Serial1.print("The sun_state is: ");
 Serial1.println(sun_state);
+Serial1.println();
+Serial1.println();
+delay(5000);      
+
+
+
        
 
 }
 
 void check_schedule(){
-    
+       //nexLoop(nex_listen_list);
       if(the_time==schedules_water_start){
             relay.turn_on_channel(1);
+             //nexLoop(nex_listen_list);
       }
       else if(the_time==schedules_water_end){
             relay.turn_off_channel(1);
+             //nexLoop(nex_listen_list);
       }
       else if(the_time==schedules_air_start){
             relay.turn_on_channel(2);
+             //nexLoop(nex_listen_list);
       }
       else if(the_time==schedules_air_end){
             relay.turn_off_channel(2);
+             //nexLoop(nex_listen_list);
       }
       else if(the_time==schedules_light_start){
             relay.turn_on_channel(3);
+             //nexLoop(nex_listen_list);
       }
       else if(the_time==schedules_light_end){
             relay.turn_off_channel(3);
+             //nexLoop(nex_listen_list);
       }
       
      
@@ -742,34 +1103,67 @@ Serial1.println("We are in the UpdateSensorValues Function ");
      
      //This reads the analog input and converts it to pH
       pH_Sensor_Value = analogRead(A0);
+             //nexLoop(nex_listen_list);
       pH_Sensor_Voltage = pH_Sensor_Value * (3.3 / 1023.0);
       pH_Sensor_Reading = (( -5.6548 * pH_Sensor_Voltage) + 15.509);
       pH =  pH_Sensor_Reading;     
 
+             //nexLoop(nex_listen_list);
       //Getting LPS35 water Temp
       temperature = lps35hw.readTemperature()* 9/5 + 32;
       
+             //nexLoop(nex_listen_list);
       //Getting LPS53 Pressure data
       pressure = lps35hw.readPressure();
 
+             //nexLoop(nex_listen_list);
       //Getting Water Flow
       flow =  get_flow();
+             //nexLoop(nex_listen_list);
 
-    //Getting the DHT Temp & Humidity
-    measurement =dht.getTempAndHumidity();
-    
-    DHT_temperature = measurement.temperature;
-    DHT_humidity = measurement.humidity;
- 
-    TempF = dht.toFahrenheit(DHT_temperature);
+             //nexLoop(nex_listen_list);
+  
 
-    //Getting the DHT Humidity
-    humidity = DHT_humidity;
+  //This resets the logging_trigger to true so that we get the next update in 5 mins 
+  if(timeClient.getSeconds() %2 !=0 && DHT_trigger==false){
+      DHT_trigger = true;
+Serial1.println("Reset DHT_trigger to TRUE");
+  }
+
+  //This checks the time and then if the DHT_trigger is true it will update the DHT and Lux data and set the DHT_trigger to false
+  // This ensures that we only call the function once in the desired time frame
+  if(timeClient.getSeconds() %2 ==0  && DHT_trigger){
+          //Getting the DHT Temp & Humidity
+          measurement =dht.getTempAndHumidity();   
+         DHT_trigger = false;
+Serial1.println("Reset DHT_trigger to FALSE");
+
+      DHT_temperature = measurement.temperature;
+      DHT_humidity = measurement.humidity;
+               //nexLoop(nex_listen_list);
+   
+      TempF = dht.toFahrenheit(DHT_temperature);
+               //nexLoop(nex_listen_list);
+  
+      //Getting the DHT Humidity
+      humidity = DHT_humidity;
+               //nexLoop(nex_listen_list);
 
       //Getting the lux readings
       lux1 = light.readLight();
+             nexLoop(nex_listen_list);
 
       lux2 = light_2.readLight();
+             //nexLoop(nex_listen_list);
+      
+  }  
+
+
+
+
+
+
+
 
 
 /*
@@ -897,6 +1291,243 @@ void logData(){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //This funtion is used to update the sensor values being shown on the display
 void bUpdateDisplay(){
+ 
+ if(pagenumber==1){
+   dtostrf(temperature, 6, 2, temperatureWTemp);
+   tWater_Temp_page_1.setText(temperatureWTemp); 
+      dtostrf(pH, 6,2, pHTemp);
+      tWater_pH_page_1.setText(pHTemp);
+        dtostrf(pressure, 6, 2, levelTemp);
+        tWater_Lvl_page_1.setText(levelTemp);
+          dtostrf(flow, 6, 2, flowTemp);
+          tWater_Flow_page_1.setText(flowTemp);
+            dtostrf(TempF, 6, 2, temperatureFTemp);
+            tAir_Temp_page_1.setText(temperatureFTemp);
+              dtostrf(humidity, 6, 2, humidityTemp);
+              tAir_Humidity_page_1.setText(humidityTemp);
+                dtostrf(lux1, 6, 2, lux1Temp);
+                tAir_Light_1_page_1.setText(lux1Temp);
+            /////    
+                if(alerts_water_temp_min_trigger){
+                    tWater_Temp_page_1.Set_background_color_bco(18047);
+                    tWater_Temp_page_1.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_temp_max_trigger){
+                    tWater_Temp_page_1.Set_background_color_bco(64463);
+                    tWater_Temp_page_1.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_Temp_page_1.Set_background_color_bco(65535);
+                    tWater_Temp_page_1.Set_font_color_pco(0);
+                }
+            /////
+                if(alerts_water_ph_min_trigger){
+                    tWater_pH_page_1.Set_background_color_bco(64463);
+                    tWater_pH_page_1.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_ph_max_trigger){
+                    tWater_pH_page_1.Set_background_color_bco(18047);
+                    tWater_pH_page_1.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_pH_page_1.Set_background_color_bco(65535);
+                    tWater_pH_page_1.Set_font_color_pco(0);
+                }
+             ////   
+                if(alerts_ambient_temp_min_trigger){
+                    tAir_Temp_page_1.Set_background_color_bco(18047);
+                    tAir_Temp_page_1.Set_font_color_pco(65535);
+                }
+                else if(alerts_ambient_temp_max_trigger){
+                    tAir_Temp_page_1.Set_background_color_bco(64463);
+                    tAir_Temp_page_1.Set_font_color_pco(65535);
+                }
+                else{
+                    tAir_Temp_page_1.Set_background_color_bco(65535);
+                    tAir_Temp_page_1.Set_font_color_pco(0);
+                  
+                }
+ }
+ else if(pagenumber==3) {
+   dtostrf(temperature, 6, 2, temperatureWTemp);
+   tWater_Temp_page_2.setText(temperatureWTemp);
+      dtostrf(pH, 6,2, pHTemp);
+      tWater_pH_page_2.setText(pHTemp);
+        dtostrf(pressure, 6, 2, levelTemp);
+        tWater_Lvl_page_2.setText(levelTemp);     
+          dtostrf(flow, 6, 2, flowTemp);
+          tWater_Flow_page_2.setText(flowTemp);
+            dtostrf(TempF, 6, 2, temperatureFTemp);
+            tAir_Temp_page_2.setText(temperatureFTemp);
+              dtostrf(humidity, 6, 2, humidityTemp);
+              tAir_Humidity_page_2.setText(humidityTemp);
+                dtostrf(lux2, 6, 2, lux2Temp);
+                tAir_Light_2_page_2.setText(lux2Temp);
+                
+                if(alerts_water_temp_min_trigger){
+                    tWater_Temp_page_2.Set_background_color_bco(18047);
+                    tWater_Temp_page_2.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_temp_max_trigger){
+                    tWater_Temp_page_2.Set_background_color_bco(64463);
+                    tWater_Temp_page_2.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_Temp_page_2.Set_background_color_bco(65535);
+                    tWater_Temp_page_2.Set_font_color_pco(0);
+                }
+                if(alerts_water_ph_min_trigger){
+                    tWater_pH_page_2.Set_background_color_bco(64463);
+                    tWater_pH_page_2.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_ph_max_trigger){
+                    tWater_pH_page_2.Set_background_color_bco(18047);
+                    tWater_pH_page_2.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_pH_page_2.Set_background_color_bco(65535);
+                    tWater_pH_page_2.Set_font_color_pco(0);
+                }
+                if(alerts_ambient_temp_min_trigger){
+                    tAir_Temp_page_2.Set_background_color_bco(18047);
+                    tAir_Temp_page_2.Set_font_color_pco(65535);
+                }
+                else if(alerts_ambient_temp_max_trigger){
+                    tAir_Temp_page_2.Set_background_color_bco(64463);
+                    tAir_Temp_page_2.Set_font_color_pco(65535);
+                }
+                else{
+                    tAir_Temp_page_2.Set_background_color_bco(65535);
+                    tAir_Temp_page_2.Set_font_color_pco(0);
+                  
+                }
+ }
+ else if(pagenumber==5){
+   dtostrf(temperature, 6, 2, temperatureWTemp);
+   tWater_Temp_page_3.setText(temperatureWTemp);
+      dtostrf(pH, 6,2, pHTemp);
+      tWater_pH_page_3.setText(pHTemp);
+        dtostrf(pressure, 6, 2, levelTemp);
+        tWater_Lvl_page_2.setText(levelTemp);
+          dtostrf(flow, 6, 2, flowTemp);
+          tWater_Flow_page_3.setText(flowTemp);
+            dtostrf(TempF, 6, 2, temperatureFTemp);
+            tAir_Temp_page_3.setText(temperatureFTemp);
+              dtostrf(humidity, 6, 2, humidityTemp);
+              tAir_Humidity_page_3.setText(humidityTemp);
+                dtostrf(lux1, 6, 2, lux1Temp);
+                tAir_Light_1_page_3.setText(lux1Temp);
+                
+                if(alerts_water_temp_min_trigger){
+                    tWater_Temp_page_3.Set_background_color_bco(18047);              
+                    tWater_Temp_page_3.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_temp_max_trigger){
+                    tWater_Temp_page_3.Set_background_color_bco(64463);
+                    tWater_Temp_page_3.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_Temp_page_3.Set_background_color_bco(65535);
+                    tWater_Temp_page_3.Set_font_color_pco(0);
+                }
+                if(alerts_water_ph_min_trigger){
+                    tWater_pH_page_3.Set_background_color_bco(64463);
+                    tWater_pH_page_3.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_ph_max_trigger){
+                    tWater_pH_page_3.Set_background_color_bco(18047);
+                    tWater_pH_page_3.Set_font_color_pco(65535);
+                }
+                else{
+                    //tWater_pH_page_3.Set_background_color_bco(65535);
+                    tWater_pH_page_3.Set_font_color_pco(0);
+                }
+                
+                if(alerts_ambient_temp_min_trigger){
+                    tAir_Temp_page_3.Set_background_color_bco(18047);
+                    tAir_Temp_page_3.Set_font_color_pco(65535);
+                }
+                else if(alerts_ambient_temp_max_trigger){
+                    tAir_Temp_page_3.Set_background_color_bco(64463);
+                    tAir_Temp_page_3.Set_font_color_pco(65535);
+                }
+                else{
+                    tAir_Temp_page_3.Set_background_color_bco(65535);
+                    tAir_Temp_page_3.Set_font_color_pco(0);
+                  
+                }
+ }
+ else if(pagenumber==7){
+   dtostrf(temperature, 6, 2, temperatureWTemp);
+   tWater_Temp_page_4.setText(temperatureWTemp);
+      dtostrf(pH, 6,2, pHTemp);
+      tWater_pH_page_4.setText(pHTemp);
+        dtostrf(pressure, 6, 2, levelTemp);
+        tWater_Lvl_page_2.setText(levelTemp);
+          dtostrf(flow, 6, 2, flowTemp);
+          tWater_Flow_page_4.setText(flowTemp);
+            dtostrf(TempF, 6, 2, temperatureFTemp);
+            tAir_Temp_page_4.setText(temperatureFTemp);
+              dtostrf(humidity, 6, 2, humidityTemp);
+              tAir_Humidity_page_4.setText(humidityTemp);
+                dtostrf(lux2, 6, 2, lux2Temp);
+                tAir_Light_2_page_4.setText(lux2Temp);  
+               
+                if(alerts_water_temp_min_trigger){
+                    tWater_Temp_page_4.Set_background_color_bco(18047);
+                    tWater_Temp_page_4.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_temp_max_trigger){
+                    tWater_Temp_page_4.Set_background_color_bco(64463);
+                    tWater_Temp_page_4.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_Temp_page_4.Set_background_color_bco(65535);
+                    tWater_Temp_page_4.Set_font_color_pco(0);
+                }
+                if(alerts_water_ph_min_trigger){
+                    tWater_pH_page_4.Set_background_color_bco(64463);
+                    tWater_pH_page_4.Set_font_color_pco(65535);
+                }
+                else if(alerts_water_ph_max_trigger){
+                    tWater_pH_page_4.Set_background_color_bco(18047);
+                    tWater_pH_page_4.Set_font_color_pco(65535);
+                }
+                else{
+                    tWater_pH_page_4.Set_background_color_bco(65535);
+                    tWater_pH_page_4.Set_font_color_pco(0);
+                }
+                if(alerts_ambient_temp_min_trigger){
+                    tAir_Temp_page_4.Set_background_color_bco(18047);
+                    tAir_Temp_page_4.Set_font_color_pco(65535);
+                }
+                else if(alerts_ambient_temp_max_trigger){
+                    tAir_Temp_page_4.Set_background_color_bco(64463);
+                    tAir_Temp_page_4.Set_font_color_pco(65535);
+                }
+                else{
+                    tAir_Temp_page_4.Set_background_color_bco(65535);
+                    tAir_Temp_page_4.Set_font_color_pco(0);
+                  
+                }
+ }
+
+//59750 RED
+//64463  color redish
+//62891 orangeish
+//18047 blueish
+//65535 white
+//        alerts_water_temp_min_trigger,
+//        alerts_water_temp_max_trigger,
+//        alerts_water_ph_min_trigger,
+//        alerts_water_ph_max_trigger,
+//        alerts_ambient_temp_min_trigger,
+//        alerts_ambient_temp_max_trigger;
+//                  phMin.Set_background_color_bco(18047);
+//                  phMax.Set_font_color_pco(65535)
+
+    
+  
 //  This is how you can communicate to the display without the nextion software
 //  Serial.print(F("t0.txt=""));
 //  Serial.print(F("This is page "));
@@ -905,65 +1536,7 @@ void bUpdateDisplay(){
 //  Serial.write(0xff);
 //  Serial.write(0xff);
 //  Serial.write(0xff);
-//Serial1.println("We are in the UpdateDisplayData Function ");
-//
 
-       
-//Updating the pH variable
-      dtostrf(pH, 6,2, pHTemp);
-      tWater_pH_page_1.setText(pHTemp);
-      tWater_pH_page_2.setText(pHTemp); 
-      tWater_pH_page_3.setText(pHTemp); 
-      tWater_pH_page_4.setText(pHTemp);    
-
-//**************************************************************************************
-//Updating the LPS variables  
-
-      dtostrf(temperature, 6, 2, temperatureWTemp);
-      tWater_Temp_page_1.setText(temperatureWTemp);
-      tWater_Temp_page_2.setText(temperatureWTemp);
-      tWater_Temp_page_3.setText(temperatureWTemp);
-      tWater_Temp_page_4.setText(temperatureWTemp);    
-       
-//*************************************************
-      dtostrf(pressure, 6, 2, levelTemp);
-      tWater_Lvl_page_1.setText(levelTemp);
-      tWater_Lvl_page_2.setText(levelTemp);
-      tWater_Lvl_page_3.setText(levelTemp);
-      tWater_Lvl_page_4.setText(levelTemp);
-      
-//**************************************************************************************
-//Updating the FLOW variables   
-      dtostrf(flow, 6, 2, flowTemp);
-      tWater_Flow_page_1.setText(flowTemp);
-      tWater_Flow_page_2.setText(flowTemp);
-      tWater_Flow_page_3.setText(flowTemp);
-      tWater_Flow_page_4.setText(flowTemp);
-            
-//**************************************************************************************
-//Updating the DHT variables
-      dtostrf(TempF, 6, 2, temperatureFTemp);
-      tAir_Temp_page_1.setText(temperatureFTemp);
-      tAir_Temp_page_2.setText(temperatureFTemp);
-      tAir_Temp_page_3.setText(temperatureFTemp);
-      tAir_Temp_page_4.setText(temperatureFTemp);  
-//*************************************************  
-      dtostrf(humidity, 6, 2, humidityTemp);
-      tAir_Humidity_page_1.setText(humidityTemp);
-      tAir_Humidity_page_2.setText(humidityTemp);
-      tAir_Humidity_page_3.setText(humidityTemp);
-      tAir_Humidity_page_4.setText(humidityTemp);
-      
-//**************************************************************************************
-//Getting the lux readings   
-      dtostrf(lux1, 6, 2, lux1Temp);
-      tAir_Light_1_page_1.setText(lux1Temp);
-      tAir_Light_1_page_3.setText(lux1Temp);
-     
-      dtostrf(lux2, 6, 2, lux2Temp);
-      tAir_Light_2_page_2.setText(lux2Temp);  
-      tAir_Light_2_page_4.setText(lux2Temp);
-//**************************************************************************************
 }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1017,7 +1590,7 @@ Serial1.println("error opening datalog.txt");
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void setup(void) {
  
-Serial1.begin(9600);
+Serial1.begin(961200);
 
   timeClient.begin();
   
@@ -1059,6 +1632,37 @@ Register the pop event callback function of the components
 //Set Alerts button
   bSet_Alerts.attachPop(bAlertsPopCallback, &bSet_Alerts);
 
+//page info callbacks
+
+//Settings1.attachPop(Settings1PopCallback, &Settings1);
+//Settings2.attachPop(Settings1PopCallback, &Settings1);
+//Settings3.attachPop(Settings1PopCallback, &Settings1);
+//Settings4.attachPop(Settings1PopCallback, &Settings1);
+//
+//Back.attachPop(BackPopCallback, &Back);
+
+////Set pages callbacks
+//    
+//  page0.attachPop(page0PopCallback,&page0);  // Page press event
+  page1.attachPop(page1PopCallback,&page1);  
+//  page2.attachPop(page2PopCallback,&page2);  // Page press event
+  page3.attachPop(page3PopCallback,&page3);  
+ // page4.attachPop(page4PopCallback,&page4);  // Page press event
+  page5.attachPop(page5PopCallback,&page5);  
+ // page6.attachPop(page6PopCallback,&page6);  // Page press event
+  page7.attachPop(page7PopCallback,&page7);  
+ // page8.attachPop(page8PopCallback,&page8);  // Page press event
+ page9.attachPop(page9PopCallback,&page9);  
+ // page10.attachPop(page10PopCallback,&page10);  // Page press event
+//  page11.attachPop(page11PopCallback,&page11);  
+//  page12.attachPop(page12PopCallback,&page12);  
+//  page13.attachPop(page13PopCallback,&page13);  // Page press event
+//  page14.attachPop(page14PopCallback,&page14);  
+
+////  sendCurrentPageId(&pagenumber);
+
+
+
 
 Serial1.println("\nNextion Stuff Should be setup\n");
 
@@ -1073,30 +1677,36 @@ Serial1.println("\nNextion Stuff Should be setup\n");
  
 }
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////
- //                                        LOOP                                                  //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-void loop(void) {
-//Serial1.print("In Loop");   
-  //updating the time client to get the current time
-  timeClient.update();
-  timeStamp = timeClient.getFormattedTime();
+void display_check(){
+  
+    //nexLoop(nex_listen_list);
 
-  //This is the function used to monitor the Nextion display for touch input
-  nexLoop(nex_listen_list);
+  //
+    if(pagenumber==1||pagenumber==3||pagenumber==5||pagenumber==7){
 
-  //This checks the old_time which has the last second value and compares it to the current seconds
-  // This ensures that we only call the function once in the desired time frame
-  new_time  =  timeClient.getEpochTime(); 
-  time_diff = new_time-old_time;  
-  if(time_diff>=1){
-    Serial1.println("time diff > 1");
-         check_schedule();
-         check_alerts();
-         bUpdateSensorValues();
-         bUpdateDisplay();
-  }
+            //This checks the old_time which has the last second value and compares it to the current seconds
+            // This ensures that we only call the function once in the desired time frame
 
+                   nexLoop(nex_listen_list);          
+                   check_schedule();
+                   
+                   nexLoop(nex_listen_list);
+                   check_alerts();
+                   
+                   nexLoop(nex_listen_list);
+                   bUpdateSensorValues();
+                   
+                   nexLoop(nex_listen_list);
+                   bUpdateDisplay();
+                   
+                   nexLoop(nex_listen_list);
+                //   old_time=new_time;
+            }        
+            
+    
+}
+
+void log_check(){
 //DATA LOGGING CHECKS
   //This resets the logging_trigger to true so that we get the next update in 5 mins 
   if(timeClient.getMinutes() % 5 == 0 && timeClient.getSeconds() ==5 && logging_trigger==false){
@@ -1111,7 +1721,24 @@ Serial1.println("Reset logging_trigger to TRUE");
          logging_trigger = false;
 Serial1.println("Reset logging_trigger to FALSE");
       
-  }
+  }  
+}
 
-  old_time = new_time;
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+ //                                        LOOP                                                  //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void loop(void) {  
+  //nexLoop(nex_listen_list); 
+  //updating the time client to get the current time
+  timeClient.update();
+  timeStamp = timeClient.getFormattedTime();
+//pageID.getValue(&current_page);
+
+
+ // log_check();
+
+  display_check();
+  //This is the function used to monitor the Nextion display for touch input
+  nexLoop(nex_listen_list);
 }
