@@ -74,12 +74,12 @@ uint8_t pagenumber;
 
 
 //Variables for the alert sensors
-String  alerts_water_temp_min,
-        alerts_water_temp_max,
-        alerts_water_ph_min,
-        alerts_water_ph_max,
-        alerts_ambient_temp_min,
-        alerts_ambient_temp_max;
+String    alerts_water_temp_min="0";
+String    alerts_water_temp_max="999";
+String    alerts_water_ph_min="0";
+String    alerts_water_ph_max="999";
+String    alerts_ambient_temp_min="0";
+String    alerts_ambient_temp_max="999";
 
 bool        alerts_water_temp_min_trigger = false;
 bool        alerts_water_temp_max_trigger = false;
@@ -87,7 +87,10 @@ bool        alerts_water_ph_min_trigger = false;
 bool        alerts_water_ph_max_trigger = false;
 bool        alerts_ambient_temp_min_trigger = false;
 bool        alerts_ambient_temp_max_trigger = false;
-        
+
+bool use_schedule = false;
+
+//bool use_alerts   = false;
 
 //Variables for the scheduling
 String schedules_water_start,
@@ -128,7 +131,7 @@ File dataFile;  //File used for SD card
 //variables for the LPS water temp and pressure sensor
 float temperature;
 float pressure;
-
+float atmo_pressure;
 //variable for the flow sensor
 float flow;
 
@@ -835,12 +838,12 @@ Serial1.print("The alerts_water_temp_min is: ");
 Serial1.println(alerts_water_temp_min);
 Serial1.print("The alerts_water_temp_max is: ");
 Serial1.println(alerts_water_temp_max);
-delay(5000);  
+//delay(5000);  
 Serial1.print("The alerts_water_ph_min is: ");
 Serial1.println(alerts_water_ph_min);
 Serial1.print("The alerts_water_ph_max is: ");
 Serial1.println(alerts_water_ph_max);
-delay(5000);  
+//delay(5000);  
 Serial1.print("The alerts_ambient_temp_min is: ");
 Serial1.println(alerts_ambient_temp_min);
 Serial1.print("The alerts_ambient_temp_max is: ");
@@ -848,7 +851,7 @@ Serial1.println(alerts_ambient_temp_max);
 
 Serial1.println();
 Serial1.println();
-delay(5000);      
+//delay(5000);      
 
 
 
@@ -981,7 +984,7 @@ Serial1.print("The alerts_ambient_temp_max_trigger is: ");
 Serial1.println(alerts_ambient_temp_max_trigger);
 
 
-delay(1000);
+//delay(1000);
 }
 
 
@@ -1051,7 +1054,7 @@ Serial1.print("The sun_state is: ");
 Serial1.println(sun_state);
 Serial1.println();
 Serial1.println();
-delay(5000);      
+//delay(5000);      
 
 
 
@@ -1114,7 +1117,7 @@ Serial1.println("We are in the UpdateSensorValues Function ");
       
              //nexLoop(nex_listen_list);
       //Getting LPS53 Pressure data
-      pressure = lps35hw.readPressure();
+      pressure = (lps35hw.readPressure()-atmo_pressure);
 
              //nexLoop(nex_listen_list);
       //Getting Water Flow
@@ -1661,7 +1664,7 @@ Register the pop event callback function of the components
 
 ////  sendCurrentPageId(&pagenumber);
 
-
+atmo_pressure = lps35hw.readPressure();
 
 
 Serial1.println("\nNextion Stuff Should be setup\n");
@@ -1688,8 +1691,10 @@ void display_check(){
             // This ensures that we only call the function once in the desired time frame
 
                    nexLoop(nex_listen_list);          
+                   if(use_schedule){
                    check_schedule();
-                   
+                   }
+                     
                    nexLoop(nex_listen_list);
                    check_alerts();
                    
@@ -1699,8 +1704,7 @@ void display_check(){
                    nexLoop(nex_listen_list);
                    bUpdateDisplay();
                    
-                   nexLoop(nex_listen_list);
-                //   old_time=new_time;
+                   nexLoop(nex_listen_list); 
             }        
             
     
