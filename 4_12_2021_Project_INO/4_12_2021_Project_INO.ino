@@ -90,7 +90,7 @@ bool        alerts_ambient_temp_max_trigger = false;
 
 bool use_schedule = false;
 
-//bool use_alerts   = false;
+bool use_alerts   = false;
 
 //Variables for the scheduling
 String schedules_water_start,
@@ -779,6 +779,7 @@ void bUploadPopCallback(void *ptr) {
 void bSchedulePopCallback(void *ptr) {
  Serial1.print ( "set Schedule button working" ); 
  get_schedule();
+ use_schedule = true;
 
  
 }
@@ -786,6 +787,7 @@ void bSchedulePopCallback(void *ptr) {
 void bAlertsPopCallback(void *ptr) {
  Serial1.print ( "set alerts button working" );
  get_alerts();
+ use_alerts = true;
  
 }
 
@@ -802,7 +804,7 @@ void bAlertsPopCallback(void *ptr) {
 // this is called when we are at the alerts page when the user presses the set alerts button
 void get_alerts(){
 
-Serial1.println("Getting ALerts");
+Serial1.println("Getting Alerts");
 
 
  memset(buffer, 0, sizeof(buffer));
@@ -1056,13 +1058,20 @@ Serial1.println();
 Serial1.println();
 //delay(5000);      
 
+schedules_water_start = format_Time(schedules_water_start);
+schedules_water_end   = format_Time(schedules_water_end);
 
+schedules_air_start   = format_Time(schedules_air_start);
+schedules_air_end     = format_Time(schedules_air_end);
 
-       
+schedules_light_start = format_Time(schedules_light_start);
+schedules_light_end   = format_Time(schedules_light_end);     
 
 }
 
 void check_schedule(){
+
+  
        //nexLoop(nex_listen_list);
       if(the_time==schedules_water_start){
             relay.turn_on_channel(1);
@@ -1093,6 +1102,24 @@ void check_schedule(){
   
 }
 
+
+// This function is used to format the time for scheduling into useable data
+String format_Time(String buf){
+
+ String hour_str; 
+ String mins_str;
+ String result;
+
+ hour_str = buf.substring(0,buf.indexOf("."));
+ mins_str = buf.substring(buf.indexOf(".")+1);
+ 
+  result = hour_str + ":" + mins_str;
+
+ 
+  
+return result;
+
+}
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
  //                                   UPDATE SENSOR VARIABLES                                     // 
